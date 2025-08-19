@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self';">
+  <meta name="description" content="Affine CipherLab - 古典暗号「アフィン暗号」を学習・体験できる教育ツール">
+  <meta name="author" content="ipusiron">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <link rel="icon" href="data:,">
+  <title>Affine CipherLab</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <h1>Affine CipherLab</h1>
+    <p>古典暗号「アフィン暗号」を学習・体験できるツール</p>
+  </header>
+
+  <!-- タブナビゲーション -->
+  <nav class="tabs">
+    <button class="tab-button active" data-tab="encrypt">暗号化</button>
+    <button class="tab-button" data-tab="decrypt">復号</button>
+    <button class="tab-button" data-tab="crack">総当たり解読</button>
+    <button class="tab-button" data-tab="learn">座学</button>
+  </nav>
+
+  <!-- タブ内容 -->
+  <main>
+    <!-- 暗号化タブ -->
+    <section id="encrypt" class="tab-content active">
+      <h2>暗号化 (Encrypt)</h2>
+      <div class="params">
+        <label for="a-encrypt">a:</label>
+        <input type="number" id="a-encrypt" value="5">
+        <label for="b-encrypt">b:</label>
+        <input type="number" id="b-encrypt" value="8">
+      </div>
+      <div class="input-section">
+        <textarea id="plaintext" rows="5" placeholder="平文を入力してください"></textarea>
+        <div class="options">
+          <label class="checkbox-label">
+            <input type="checkbox" id="strip-spaces-encrypt">
+            <span class="checkmark"></span>
+            空白を除去
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="strip-symbols-encrypt">
+            <span class="checkmark"></span>
+            記号を除去
+          </label>
+        </div>
+        <button id="encrypt-btn">暗号化</button>
+      </div>
+      <div id="mapping-encrypt" class="mapping-panel">
+        <!-- 写像表などをここに描画 -->
+      </div>
+      <div class="output">
+        <div class="output-header">
+          <h3>暗号文</h3>
+          <button class="copy-btn" data-target="ciphertext" title="クリップボードにコピー">📋 コピー</button>
+        </div>
+        <textarea id="ciphertext" rows="5" readonly></textarea>
+      </div>
+    </section>
+
+    <!-- 復号タブ -->
+    <section id="decrypt" class="tab-content">
+      <h2>復号 (Decrypt)</h2>
+      <div class="params">
+        <label for="a-decrypt">a:</label>
+        <input type="number" id="a-decrypt" value="5">
+        <label for="b-decrypt">b:</label>
+        <input type="number" id="b-decrypt" value="8">
+      </div>
+      <div class="input-section">
+        <div class="input-header">
+          <label for="ciphertext-input" style="font-size: 14px; color: var(--muted); margin: 0;">暗号文入力</label>
+          <button class="copy-btn" id="sync-cipher-btn" style="background: var(--accent-weak); color: var(--accent); border: 1px solid var(--accent);">🔄 暗号化タブの暗号文とパラメーターをセット</button>
+        </div>
+        <textarea id="ciphertext-input" rows="5" placeholder="暗号文を入力してください"></textarea>
+        <div class="options">
+          <label class="checkbox-label">
+            <input type="checkbox" id="strip-spaces-decrypt">
+            <span class="checkmark"></span>
+            空白を除去
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="strip-symbols-decrypt">
+            <span class="checkmark"></span>
+            記号を除去
+          </label>
+        </div>
+        <button id="decrypt-btn">復号</button>
+      </div>
+      <div id="mapping-decrypt" class="mapping-panel">
+        <!-- 写像表などをここに描画 -->
+      </div>
+      <div class="output">
+        <div class="output-header">
+          <h3>復号結果</h3>
+          <button class="copy-btn" data-target="plaintext-output" title="クリップボードにコピー">📋 コピー</button>
+        </div>
+        <textarea id="plaintext-output" rows="5" readonly></textarea>
+      </div>
+    </section>
+
+    <!-- 総当たり解読タブ -->
+    <section id="crack" class="tab-content">
+      <h2>総当たり解読 (Crack)</h2>
+      <div class="input-section">
+        <textarea id="crack-input" rows="5" placeholder="暗号文を入力してください"></textarea>
+        <button id="crack-btn">解析する</button>
+      </div>
+      <div id="mapping-crack" class="mapping-panel">
+        <!-- 選択した候補の写像表 -->
+      </div>
+      <div class="output">
+        <h3>候補結果</h3>
+        <p style="font-size: 13px; color: var(--muted); margin: 0 0 12px;">
+          📊 <strong>score</strong>=総合スコア(高いほど良い) | <strong>hits</strong>=英単語数 | <strong>chi</strong>=文字頻度一致度(低いほど良い)
+        </p>
+        <div id="crack-results">
+          <!-- (a,b) 候補と復号結果をリスト表示 -->
+        </div>
+      </div>
+    </section>
+
+    <!-- 座学タブ -->
+    <section id="learn" class="tab-content">
+      <h2>座学 (Learn)</h2>
+      <article>
+        <h3>定義</h3>
+        <p>アフィン暗号は以下で定義されます。ただし、n=26とします。<br>
+        暗号化: Enc(m) = (a·m + b) mod n<br>
+        復号: Dec(c) = a⁻¹·(c − b) mod n<br>
+        </p>
+
+        <h3>なぜ a と n の互いに素が重要か</h3>
+        <p>gcd(a,n)=1 を満たさないと逆元 a⁻¹ が存在せず、復号できません。<br>
+        n=26の場合、aは{1,3,5,7,9,11,15,17,19,21,23,25}である必要があります。</p>
+
+        <h3>直感的な理解</h3>
+        <p>アフィン暗号の式 Enc(m) = (a·m + b) mod n において：</p>
+        <ul>
+          <li><strong>b</strong>：文字を一定数だけシフト（ずらす）</li>
+          <li><strong>a</strong>：文字の対応関係を変更
+            <ul>
+              <li>a=1 の場合：Enc(m) = (m + b) mod n となり、シフト暗号と同じ</li>
+              <li>a≠1 の場合：単純なシフトではなく、より複雑な文字変換になる</li>
+            </ul>
+          </li>
+        </ul>
+
+        <h3>シーザー暗号・シフト暗号との関係</h3>
+        <p><strong>シーザー暗号</strong>と<strong>シフト暗号</strong>は、アフィン暗号の特殊例です：</p>
+        <ul>
+          <li><strong>シーザー暗号</strong>: a=1, b=3 の場合（古代ローマのカエサルが使用）</li>
+          <li><strong>シフト暗号</strong>: a=1, b=任意の値（0～25）の場合</li>
+        </ul>
+        <p>つまり、Enc(m) = (1·m + b) mod n = m + b mod n となり、単純な文字シフトになります。</p>
+
+        <h3>総当たり解読の仕組み</h3>
+        <p>このツールの総当たり解読は以下の手順で動作します：</p>
+        <ol>
+          <li><strong>全パラメーター試行</strong>：有効なaの値12個 × bの値26個 = 312通りの組み合わせを全て試す</li>
+          <li><strong>復号実行</strong>：各(a,b)で暗号文を復号し、平文候補を生成</li>
+          <li><strong>英語らしさ判定</strong>：生成された平文候補を以下2つの指標で評価
+            <ul>
+              <li>よく使われる英単語（THE, AND, TO等）の出現回数</li>
+              <li>英語の文字頻度（Eがもっとも多い等）との一致度（カイ二乗検定）</li>
+            </ul>
+          </li>
+          <li><strong>スコア計算・順位付け</strong>：上記2指標を組み合わせて総合スコアを算出し、高得点順に表示</li>
+        </ol>
+        <p><strong>スコア表示の見方：</strong></p>
+        <ul>
+          <li><strong>score</strong>：総合スコア（大きいほど正解に近い可能性が高い）</li>
+          <li><strong>hits</strong>：一般的な英単語（THE, AND, TO等）の出現回数</li>
+          <li><strong>chi</strong>：カイ二乗値（小さいほど英語の文字頻度に近い）</li>
+        </ul>
+        <p>例：score=40.64 / hits=0 / chi=11.3<br>
+        → 英単語は見つからなかったが、文字頻度はそれなりに英語に近い</p>
+        <p>※この手法は平文が英語である場合に効果的です。日本語や他言語では精度が下がります。</p>
+
+        <h3>関連暗号</h3>
+        <ul>
+          <li>ヴィジュネル暗号（多表式換字）</li>
+          <li>プレイフェア暗号（2文字換字）</li>
+        </ul>
+      </article>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer">
+      🔗 GitHubリポジトリはこちら（ 
+      <a href="https://github.com/ipusiron/affine-cipherlab" target="_blank">ipusiron/affine-cipherlab</a> ）
+    </div>
+  </footer>
+
+  <script src="js/script.js"></script>
+</body>
+</html>
