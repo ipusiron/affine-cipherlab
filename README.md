@@ -41,9 +41,9 @@ demo: https://ipusiron.github.io/affine-cipherlab/
 
 ## 📸 スクリーンショット
 
-> ![ダミー](assets/screenshot.png)  
+> ![アフィン暗号での暗号化](assets/screenshot.png)  
 >
-> *ダミー*
+> *アフィン暗号での暗号化*
 
 ---
 
