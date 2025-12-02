@@ -3,37 +3,49 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
-This is **Affine CipherLab** - an educational web tool for learning and experiencing the Affine Cipher, a classical cryptographic algorithm. The tool is part of the "生成AIで作るセキュリティツール100" (100 Security Tools Made with Generative AI) project.
-
-## Core Functionality
-The application provides 4 main tabs:
-1. **Encryption** - Encrypt text with affine cipher and visualize character mappings
-2. **Decryption** - Decrypt ciphertext using modular inverse
-3. **Brute Force Crack** - Try all 312 possible (a,b) key combinations  
-4. **Learn** - Educational content about affine cipher mathematics
+**Affine CipherLab** - an educational web tool for learning the Affine Cipher (古典暗号). Part of the "生成AIで作るセキュリティツール100" project (Day049).
 
 ## Architecture
-- **Single-page application** with vanilla JavaScript
-- **No build process** - runs directly in browser
-- **File structure**:
-  - `index.html` - Main HTML with 4-tab layout
-  - `js/script.js` - Core logic (encryption/decryption, GCD, modular inverse, brute force)
-  - `css/style.css` - Responsive styling with automatic dark mode support
-  
-## Key Technical Details
-- **Affine cipher formula**: `E(x) = (a·x + b) mod 26`
-- **Valid 'a' values**: {1, 3, 5, 7, 9, 11, 15, 17, 19, 21, 23, 25} (must be coprime with 26)
-- **Modular inverse** calculation using Extended Euclidean Algorithm
-- **Brute force scoring** based on English letter frequency and common words
+Single-page vanilla JavaScript application with no build process or external dependencies.
 
-## Development Commands
-Since this is a static site with no build process:
+**File Structure:**
+- `index.html` - 4-tab layout (暗号化/復号/総当たり解読/座学)
+- `js/script.js` - Core logic wrapped in IIFE with `"use strict"`
+- `css/style.css` - Responsive styling with `prefers-color-scheme` dark mode
+
+## Development
 - **Run locally**: Open `index.html` directly in browser or use any static server
-- **Deploy**: Host files on GitHub Pages (already configured at ipusiron.github.io/affine-cipherlab/)
+- **Deploy**: GitHub Pages at ipusiron.github.io/affine-cipherlab/
 
-## Important Notes
-- CSS includes automatic dark mode via `prefers-color-scheme`
-- Mapping visualization highlights character transformations in real-time
-- No external dependencies - pure vanilla JavaScript implementation
-- All DOM manipulation uses safe methods (createElement, textContent) to prevent XSS
-- Security headers configured for safe GitHub Pages deployment
+## Key Implementation Details
+
+**Cryptographic Functions (js/script.js):**
+- `gcd(a, b)` / `egcd(a, b)` - GCD and Extended Euclidean Algorithm
+- `modInverse(a, m)` - Modular inverse calculation
+- `encryptChar` / `decryptChar` - Per-character transformation preserving case
+- `bruteForceAffine(cipher)` - Tests all 312 (a,b) combinations
+
+**Constraints:**
+- Valid 'a' values: `{1, 3, 5, 7, 9, 11, 15, 17, 19, 21, 23, 25}` (coprime with 26)
+- Formula: `E(x) = (a·x + b) mod 26`, `D(y) = a⁻¹·(y - b) mod 26`
+
+**Brute Force Scoring:**
+- `scoreCandidate(text)` uses chi-square test against English letter frequencies (`ENG_FREQ`)
+- Matches against 300-word common English word list (`CONNON_WORDS`)
+- Score formula: `hits * 10 + (500 / (1 + chi))`
+
+**Input Validation:**
+- `hasMultibyteChars()` - Rejects non-ASCII input (Japanese, etc.)
+- `validateA()` - Checks if 'a' is coprime with 26
+- All DOM updates use `createElement` / `textContent` (XSS-safe)
+
+**UI Patterns:**
+- Tab state managed via `.active` class toggling
+- Parameter sync between Encrypt/Decrypt tabs via `syncAB()`
+- Mapping table highlights via `highlightRows()` / `pulseRow()`
+- Toast notifications via `showToast()`
+
+## Security Notes
+- CSP headers configured in `<meta>` tags
+- No `innerHTML` usage - all DOM manipulation is safe
+- Clipboard API with fallback for older browsers

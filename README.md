@@ -1,11 +1,36 @@
 <!--
 ---
-title: Affine CipherLab
-category: classic-crypto
+id: day049
+slug: affine-cipherlab
+
+title: "Affine CipherLab"
+
+subtitle_ja: "アフィン暗号学習ツール"
+subtitle_en: "Affine Cipher Learning Tool"
+
+description_ja: "古典暗号「アフィン暗号」の暗号化・復号・総当たり解読を体験できる教育ツール。写像表の可視化により直感的な理解をサポート。"
+description_en: "An educational tool for experiencing affine cipher encryption, decryption, and brute-force cracking. Supports intuitive understanding through mapping table visualization."
+
+category_ja:
+  - 古典暗号
+category_en:
+  - Classic Cryptography
+
 difficulty: 2
-description: Visualize and practice affine cipher encryption, decryption, and mapping.
-tags: [affine, cipher, cryptography, education]
-demo: https://ipusiron.github.io/affine-cipherlab/
+
+tags:
+  - affine-cipher
+  - cryptography
+  - encryption
+  - decryption
+  - brute-force
+  - education
+  - visualization
+
+repo_url: "https://github.com/ipusiron/affine-cipherlab"
+demo_url: "https://ipusiron.github.io/affine-cipherlab/"
+
+hub: true
 ---
 -->
 
