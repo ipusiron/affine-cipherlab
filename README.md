@@ -329,7 +329,8 @@ affine-cipherlab/
 │   ├── i18n.test.js              # 言語の選択
 │   ├── load.js                   # 通常のスクリプトをテストに読み込む
 │   ├── messages.test.js          # 日英の辞書
-│   └── readme.test.js            # READMEの表・ツリー・画像
+│   ├── readme.test.js            # READMEの表・ツリー・画像
+│   └── solve.test.js             # 既知の2組から鍵を解く・頻度による仮定・URLの受け取り
 ├── tools/                        # 開発用のスクリプト（画面では使わない）
 │   ├── corpus/                   # 英文の抜粋（Project Gutenberg）
 │   │   ├── eval-pg98.txt         # 評価用: A Tale of Two Cities（#98）

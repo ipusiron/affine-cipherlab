@@ -2,6 +2,7 @@
 // 使い方: node tools/evaluate.mjs tune（学習用の英文で単語の重みと「見分けにくい」の境目を選ぶ）
 //         node tools/evaluate.mjs eval（評価用の英文で長さ別の正答率を出す）
 //         node tools/evaluate.mjs write（その正答率を js/accuracy.js に書く）
+//         node tools/evaluate.mjs freq（多い文字を E・T と仮定する手順の正答率を出す）
 import fs from 'node:fs';
 import { loadCore } from './load-core.mjs';
 
@@ -64,6 +65,22 @@ export function evaluate(corpus, { lengths = LENGTHS, trials = TRIALS, spaces = 
   return rows;
 }
 
+// 多い文字を E・T と仮定する手順で、1つ目の仮定が正解だった割合と、仮定のどれかに正解があった割合
+export const FREQ_LENGTHS = [50, 100, 200, 500, 1000];
+export function evaluateFrequency(corpus, { lengths = FREQ_LENGTHS, trials = TRIALS, seed = SEED } = {}) {
+  const C = loadCore();
+  return lengths.map((len) => {
+    let first = 0;
+    let within = 0;
+    for (const s of samples(corpus, len, trials, true, seed)) {
+      const hit = C.frequencyHypotheses(s.cipher).findIndex((h) => h.keys.some((k) => k.a === s.a && k.b === s.b));
+      if (hit === 0) first++;
+      if (hit >= 0) within++;
+    }
+    return { len, first, within, trials };
+  });
+}
+
 function tune() {
   const corpus = readCorpus('train-pg1342.txt');
   console.log('単語の重み（学習用の英文、空白あり、長さ 6・8・10・15・20 の平均）');
@@ -104,6 +121,10 @@ if (process.argv[1] && process.argv[1].endsWith('evaluate.mjs')) {
   else if (process.argv[2] === 'write') {
     fs.writeFileSync(new URL('../js/accuracy.js', import.meta.url), renderAccuracy());
     console.log('wrote js/accuracy.js');
+  } else if (process.argv[2] === 'freq') {
+    for (const r of evaluateFrequency(readCorpus('eval-pg98.txt'))) {
+      console.log(`${r.len}字: 1つ目の仮定が正解 ${(100 * r.first / r.trials).toFixed(1)}% / どれかに正解 ${(100 * r.within / r.trials).toFixed(1)}%`);
+    }
   } else {
     const corpus = readCorpus('eval-pg98.txt');
     for (const spaces of [true, false]) {

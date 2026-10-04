@@ -218,9 +218,91 @@
     return { results, margin, close: margin < CLOSE_MARGIN, letters, scored: Math.min(letters, SCORE_LETTERS) };
   }
 
+  // ===== 手で解く（既知平文・頻度による仮定） =====
+  // 1文字の英字を 0〜25 に。英字1文字でなければ null
+  function letterIndex(ch) {
+    const s = String(ch ?? '').trim();
+    if (s.length !== 1) return null;
+    const code = s.toUpperCase().charCodeAt(0);
+    return code >= 65 && code <= 90 ? code - 65 : null;
+  }
+
+  // 既知の2組（平文字 p → 暗号文字 c）から鍵を解く。
+  // 2つの式を引くと c1 − c2 ≡ a·(p1 − p2) (mod 26)。これを a について解き、b = c1 − a·p1。
+  // 平文字の差 dp が26と互いに素なら a は1つ。g = gcd(dp, 26) > 1 なら、解は g 個か、なし（26と互いに素な a だけが鍵になる）
+  function solveFromPairs(p1, c1, p2, c2) {
+    const [P1, C1, P2, C2] = [p1, c1, p2, c2].map(letterIndex);
+    if ([P1, C1, P2, C2].includes(null)) return { ok: false, reason: 'notLetter', keys: [] };
+    const dp = mod(P1 - P2, N);
+    const dc = mod(C1 - C2, N);
+    const base = { p: [P1, P2], c: [C1, C2], dp, dc, keys: [] };
+    if (dp === 0) return { ...base, ok: false, reason: dc === 0 ? 'samePair' : 'contradiction' };
+    const g = gcd(dp, N);
+    if (dc % g !== 0) return { ...base, ok: false, g, reason: 'noSolution' };
+    const m = N / g;
+    const inv = modInverse(dp / g, m);
+    const a0 = mod((dc / g) * inv, m);
+    const candidates = Array.from({ length: g }, (_, k) => a0 + k * m);
+    const keys = candidates.filter(isValidA).map((a) => ({ a, b: mod(C1 - a * P1, N) }));
+    const reason = keys.length === 0 ? 'noValidA' : keys.length > 1 ? 'several' : null;
+    return { ...base, ok: keys.length > 0, g, m, inv, a0, candidates, keys, reason };
+  }
+
+  // 暗号文の英字の出現数（多い順。同じ数なら A に近い順）
+  function letterFrequencies(text) {
+    const counts = new Array(N).fill(0);
+    for (const ch of String(text ?? '')) {
+      const code = ch.toUpperCase().charCodeAt(0);
+      if (code >= 65 && code <= 90) counts[code - 65]++;
+    }
+    return counts.map((n, i) => ({ i, n })).filter((x) => x.n > 0).sort((x, y) => y.n - x.n || x.i - y.i);
+  }
+
+  // 多い文字を E・T と仮定して鍵を解く手順。多い順に上位 HYPOTHESIS_LETTERS（6）文字から、
+  // （1位→E, 2位→T）・（2位→E, 1位→T）・（1位→E, 3位→T）… の順に試し、それぞれの鍵で戻した文の英語らしさを付ける
+  const HYPOTHESIS_LETTERS = 6;
+  const E = 4;
+  const T = 19;
+  function frequencyHypotheses(cipher, letters = HYPOTHESIS_LETTERS) {
+    const freq = letterFrequencies(cipher).slice(0, letters);
+    const order = [];
+    for (let s = 1; s < freq.length; s++) for (let i = 0; i < s; i++) order.push([i, s], [s, i]);
+    const text = prefixByLetters(String(cipher ?? ''), SCORE_LETTERS);
+    return order.map(([i, j], k) => {
+      const ce = freq[i];
+      const ct = freq[j];
+      const L = (i) => String.fromCharCode(65 + i);
+      const solved = solveFromPairs(L(E), L(ce.i), L(T), L(ct.i));
+      const keys = solved.keys.map((key) => {
+        const preview = applyMap(text, decryptMap(key.a, key.b));
+        return { ...key, preview, score: englishScore(preview).score };
+      });
+      return { step: k + 1, cipherE: ce.i, cipherT: ct.i, countE: ce.n, countT: ct.n, solved, keys };
+    });
+  }
+
+  // ===== URL で受け取る（「#」より後ろを先に読む。シリーズのほかのツールと同じ） =====
+  function linkParams(search, hash) {
+    const fromHash = new URLSearchParams(String(hash || '').replace(/^#/, ''));
+    return fromHash.has('text') ? fromHash : new URLSearchParams(search || '');
+  }
+
+  // 読み込んだ text を「?」と「#」の両方から消したときのパス。text がなければ null
+  function urlWithoutText(href) {
+    const url = new URL(href);
+    const fromHash = new URLSearchParams(url.hash.slice(1));
+    const inHash = fromHash.has('text');
+    if (!url.searchParams.has('text') && !inHash) return null;
+    url.searchParams.delete('text');
+    fromHash.delete('text');
+    const hash = inHash ? fromHash.toString() : url.hash.slice(1);
+    return url.pathname + url.search + (hash ? `#${hash}` : '');
+  }
+
   globalThis.AffineCore = {
-    N, VALID_A, MAX_TEXT, SCORE_LETTERS, WORD_WEIGHT, CLOSE_MARGIN, COMMON_WORDS,
+    N, VALID_A, MAX_TEXT, SCORE_LETTERS, WORD_WEIGHT, CLOSE_MARGIN, COMMON_WORDS, HYPOTHESIS_LETTERS,
     mod, gcd, egcd, modInverse, isValidA, parseKey, encryptMap, decryptMap, applyMap, preprocess, encrypt, decrypt,
-    letterSet, letterCount, fullwidthLetterCount, mappingRows, bigramScore, wordHits, englishScore, prefixByLetters, bruteForce
+    letterSet, letterCount, fullwidthLetterCount, mappingRows, bigramScore, wordHits, englishScore, prefixByLetters, bruteForce,
+    letterIndex, solveFromPairs, letterFrequencies, frequencyHypotheses, linkParams, urlWithoutText
   };
 })();

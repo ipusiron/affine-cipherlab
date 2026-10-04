@@ -293,7 +293,8 @@ affine-cipherlab/
 │   ├── i18n.test.js              # Language choice
 │   ├── load.js                   # Loads the plain scripts into tests
 │   ├── messages.test.js          # Japanese and English dictionaries
-│   └── readme.test.js            # README tables, tree and images
+│   ├── readme.test.js            # README tables, tree and images
+│   └── solve.test.js             # Solving from two known pairs, frequency guesses, URL input
 ├── tools/                        # Development scripts (not used by the page)
 │   ├── corpus/                   # English excerpts (Project Gutenberg)
 │   │   ├── eval-pg98.txt         # Evaluation: A Tale of Two Cities (#98)
