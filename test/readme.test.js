@@ -14,17 +14,20 @@ const DOCS = {
   ja: {
     file: 'README.md', switcher: '[English](README.en.md) · 日本語', day: '**Day049 - 生成AIで作るセキュリティツール100**',
     images: /^assets\/screenshot\d*\.png$/,
-    sec: { math: '🧮 数学的背景', examples: '📝 具体例', crack: '🔬 総当たり解読の仕組みと正答率', tree: '📁 ディレクトリー構造', about: '🛠️ このツールについて' },
+    sec: { math: '🧮 数学的背景', examples: '📝 具体例', crack: '🔬 総当たり解読の仕組みと正答率', tree: '📁 ディレクトリー構造', about: '🛠️ このツールについて',
+      solve: '✍️ 手で解く（既知平文と頻度による仮定）' },
     heads: { examples: '平文', accuracy: '英字の数' },
-    claims: ['99.3%', '56.2%', '約16万字', '275語', '×4', '差が3未満']
+    claims: ['99.3%', '56.2%', '約16万字', '275語', '×4', '差が3未満'],
+    solveClaims: ['差11の逆元19', 'a ≡ 3 × 19 ≡ 5', 'b ≡ 2 − 5 × 4 ≡ 8', '12個のaがどれも鍵', '上位6文字から30通り']
   },
   en: {
     file: 'README.en.md', switcher: 'English · [日本語](README.md)', day: '**Day049 - 100 Security Tools with Generative AI**',
     images: /^assets\/en\/screenshot\d*\.png$/,
     sec: { math: '🧮 Mathematical background', examples: '📝 Examples', crack: '🔬 How the brute-force attack works and how accurate it is',
-      tree: '📁 Directory structure', about: '🛠️ About this tool' },
+      tree: '📁 Directory structure', about: '🛠️ About this tool', solve: '✍️ Solve by hand (known plaintext and frequency guesses)' },
     heads: { examples: 'Plaintext', accuracy: 'Letters' },
-    claims: ['99.3%', '56.2%', 'about 160,000 letters', '275 words', '4 × the number', 'under 3']
+    claims: ['99.3%', '56.2%', 'about 160,000 letters', '275 words', '4 × the number', 'under 3'],
+    solveClaims: ['the inverse 19 of the difference 11', 'a ≡ 3 × 19 ≡ 5', 'b ≡ 2 − 5 × 4 ≡ 8', 'all 12 values of a', '30 guesses from the six']
   }
 };
 for (const d of Object.values(DOCS)) d.text = read(d.file);
@@ -123,6 +126,18 @@ for (const [lang, d] of Object.entries(DOCS)) {
     for (const c of d.claims) assert.ok(sec.includes(c), c);
   });
 
+  test(`${d.file}: 手で解くの節の表と途中式は実装と一致する`, () => {
+    const sec = section(d.text, d.sec.solve);
+    const rows = table(sec, d.heads.accuracy);
+    assert.deepEqual(rows.map((r) => Number(r[0])), ACC.frequency.map((x) => x[0]));
+    rows.forEach((r, i) => assert.deepEqual([r[1], r[2]], [`${ACC.frequency[i][1].toFixed(1)}%`, `${ACC.frequency[i][2].toFixed(1)}%`]));
+    for (const c of d.solveClaims) assert.ok(sec.includes(c), c);
+    const one = C.solveFromPairs('E', 'C', 'T', 'Z');
+    assert.deepEqual([one.dp, one.inv, one.dc, one.keys[0].a, one.keys[0].b], [11, 19, 3, 5, 8]);
+    assert.equal(C.solveFromPairs('A', 'B', 'N', 'O').keys.length, 12);
+    assert.equal(C.HYPOTHESIS_LETTERS * (C.HYPOTHESIS_LETTERS - 1), 30);
+  });
+
   test(`${d.file}: ディレクトリー構造にすべてのファイルとディレクトリーが載り、全行に説明がある`, () => {
     const block = section(d.text, d.sec.tree).match(/```\n([\s\S]*?)```/)[1];
     const lines = block.split('\n').filter((l) => l.trim()).slice(1);
@@ -142,7 +157,7 @@ for (const [lang, d] of Object.entries(DOCS)) {
   });
 }
 
-test('js/accuracy.js は tools/evaluate.mjs write の出力と一致する（評価用の英文、決まった種）', () => {
+test('js/accuracy.js は tools/evaluate.mjs write の出力と一致する（評価用の英文、決まった種。総当たりと頻度による仮定）', () => {
   assert.equal(read('js/accuracy.js'), renderAccuracy());
 });
 
@@ -161,7 +176,7 @@ test('画像: 参照はすべて実在し、日本語版は assets/、英語版�
   const refs = {};
   for (const [lang, d] of Object.entries(DOCS)) {
     refs[lang] = [...d.text.matchAll(/!\[[^\]]*\]\((assets\/[^)]+)\)/g)].map((m) => m[1]);
-    assert.equal(refs[lang].length, 4, lang);
+    assert.equal(refs[lang].length, 6, lang);
     for (const r of refs[lang]) {
       assert.ok(fs.existsSync(path.join(ROOT, r)), r);
       assert.match(r, d.images, r);

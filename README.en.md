@@ -12,12 +12,13 @@ English · [日本語](README.md)
 
 Affine CipherLab is a web tool for learning and trying the affine cipher, a classical cipher. Besides encryption and decryption, it lets you follow the letter mapping in a table and try a brute-force attack over all 312 keys. The brute-force score combines how English adjacent letter pairs look with matches of common English words, and the README lists how often the first candidate is correct for each text length.
 
-The tool has four tabs.
+The tool has five tabs.
 
 1. Encrypt: encrypts the plaintext and highlights the letters used in the mapping table
 2. Decrypt: turns the ciphertext back with the inverse
 3. Brute force: tries all 312 keys and ranks the candidates by how English they look
-4. Learn: explains the formulas, finding the inverse, special cases and how the brute-force attack works
+4. Solve by hand: shows the steps to solve the key from two known letters, and guesses of E and T from the most frequent letters
+5. Learn: explains the formulas, finding the inverse (with a calculator), special cases and how the brute-force attack works
 
 ---
 
@@ -47,6 +48,14 @@ Try it directly in your browser.
 >
 >*A 12-letter ciphertext; the tool says the first two candidates are close and the text is short (dark)*
 
+>![Find the key from two known letters](assets/en/screenshot5.png)
+>
+>*The key a=5, b=8 solved from two known pairs (E→C, T→Z) by subtraction and the inverse*
+
+>![Guess E and T from the most frequent letters](assets/en/screenshot6.png)
+>
+>*30 guesses of E and T for a 900-letter ciphertext; the key from step 21 has the highest English score*
+
 ---
 
 ## ✨ Features
@@ -58,6 +67,7 @@ Try it directly in your browser.
 - The mapping table (two columns, A–M and N–Z) highlights the rows of the letters used. While typing, the row of the last letter flashes
 - If a is not coprime to 26, the tool warns, still encrypts, and shows that the result cannot be turned back, with the rows that share a ciphertext letter in red
 - Remove spaces, remove symbols (keep only letters and spaces), and copy the ciphertext
+- Buttons put in the keys of special cases (Caesar, ROT13, Atbash, multiplicative cipher)
 
 ### 🔓 Decrypt
 
@@ -72,16 +82,25 @@ Try it directly in your browser.
 - If the gap between the first and second candidates is under 3, the tool says they are hard to tell apart. For texts under 20 letters, it adds the accuracy measured on the evaluation text for that length
 - Scoring uses the first 2,000 letters, so long ciphertexts finish without waiting
 - "Show in table" on a candidate puts its key into a and b
+- A link passes the ciphertext to Frequency Analyzer (Day009) with `#text=`
+
+### ✍️ Solve by hand
+
+- Solves the key from two known letters (two plaintext→ciphertext pairs), showing the steps: subtracting the equations, the inverse (or candidates from the gcd), then b
+- Explains why when there are several keys (difference 13), no solution, an a that is not a key, or contradictory pairs
+- Lists 30 guesses of E and T from the most frequent ciphertext letters and highlights the key with the highest English score
 
 ### 📚 Learn
 
 - The definition, why a must be coprime to 26, finding the inverse (a=5), special cases (Caesar, ROT13, multiplicative cipher, Atbash), how the brute-force attack works, and related tools
+- Inverse calculator: choose a to see the rows of the extended Euclidean algorithm (remainder, quotient, coefficients) and a⁻¹, or that there is no inverse when a is not coprime to 26
 
 ### 🌐 Interface
 
 - Japanese and English (`?lang=ja`, `?lang=en`; the choice is saved), light and dark themes (also follows the OS setting)
 - Tabs can also be moved with the arrow keys, Home and End. Warnings and results are announced to screen readers (aria-live)
 - Works when index.html is opened directly as a file (built with plain scripts)
+- Receives a ciphertext in the URL with `#text=` and opens it on the Brute force tab (see below)
 
 ---
 
@@ -91,7 +110,8 @@ Try it directly in your browser.
 2. Enter the plaintext, press Encrypt and check the letter mapping in the table
 3. On the Decrypt tab, press "Use the ciphertext and key from the Encrypt tab", then Decrypt to see it turn back
 4. Paste a ciphertext on the Brute force tab and press Analyze to see the candidates. "Show in table" puts a candidate's key in
-5. Use the Learn tab to check the inverse and special cases
+5. On the Solve by hand tab, solve the key from two known letters. For a longer ciphertext, look for the key in the table of E and T guesses
+6. Use the calculator on the Learn tab to see how the inverse is found
 
 ---
 
@@ -212,6 +232,48 @@ The table below shows how often the first candidate turned back into the origina
 
 ---
 
+## ✍️ Solve by hand (known plaintext and frequency guesses)
+
+### Find the key from two known letters
+
+With two pairs of plaintext and ciphertext letters (p1→c1, p2→c2), subtract the two equations c1 ≡ a·p1 + b and c2 ≡ a·p2 + b to remove b, and solve c1 − c2 ≡ a·(p1 − p2) (mod 26) for a.
+
+- If the plaintext difference (p1 − p2) is coprime to 26, multiplying by its inverse gives a single a. For E→C and T→Z, the inverse 19 of the difference 11 gives a ≡ 3 × 19 ≡ 5 and b ≡ 2 − 5 × 4 ≡ 8
+- If the difference is even (gcd 2), there are two candidates for a, and only the one coprime to 26 is a key
+- If the difference is 13, there are 13 candidates for a. For A→B and N→O, all 12 values of a coprime to 26 are keys, so these two pairs are not enough
+- Pairs where the same plaintext letter becomes two different ciphertext letters, or where no candidate for a is coprime to 26, cannot happen with an affine cipher
+
+### Guess E and T from the most frequent letters
+
+E and T are especially common in English, so guessing that the most frequent ciphertext letters are E and T lets you solve the key as above. The difference between E and T is 11, which is coprime to 26, so each guess gives exactly one a (if a is even or 13, the guess is wrong). The tool lists 30 guesses from the six most frequent letters, each with the English score of the text its key gives.
+
+The table shows, for the evaluation text (A Tale of Two Cities) encrypted with keys chosen by a seeded random generator, how often the first guess (most frequent as E, second as T) was correct and how often one of the 30 guesses was correct (300 trials each). Whenever the correct key was among the 30 guesses, the key with the highest English score was the correct one.
+
+| Letters | First guess correct | One of 30 correct |
+|---|---|---|
+| 50 | 13.3% | 68.7% |
+| 100 | 19.3% | 76.0% |
+| 200 | 27.7% | 90.3% |
+| 500 | 48.0% | 98.3% |
+| 1000 | 58.3% | 99.0% |
+
+- T is not always the second most frequent letter (A and O are common too), so the first guess is often wrong
+- For short ciphertexts the brute-force attack is more reliable. Frequency guesses are for learning how to solve by hand
+- `node tools/evaluate.mjs freq` reproduces the table
+
+---
+
+## 📨 Passing a ciphertext in the URL
+
+Opening the tool with a ciphertext in `#text=` (or `?text=`) opens it on the Brute force tab, already analyzed. The part after `#` is not sent to the server, so the ciphertext does not reach GitHub Pages.
+
+- Example: `https://ipusiron.github.io/affine-cipherlab/#text=Rclla%20Oaplx!`
+- After reading, `text` is removed from both `#` and `?` in the URL (so it does not stay in the address bar, bookmarks or copied URLs). The URL as opened may remain in the browser history
+- Cipher Clairvoyance (Day044) can pass a ciphertext it judges to be an affine cipher in this form
+- "Look at the letter frequencies in Frequency Analyzer (Day009)" on the Brute force tab passes the ciphertext with `#text=` (up to 5,000 characters)
+
+---
+
 ## 🎯 Use cases
 
 - Classes and study groups: show what coprime means, the inverse, and a mapping that is not one-to-one, in a visible table
@@ -228,6 +290,7 @@ The table below shows how often the first candidate turned back into the origina
 - A Content Security Policy (meta) limits scripts and styles to files from the same place, allows no inline scripts or styles, and allows no connections to other sites
 - Entered text and results are shown only with `textContent` (never interpreted as HTML)
 - Only the language and theme choices are saved in the browser. The tool works even where they cannot be saved
+- A ciphertext received with `#text=` is removed from the address bar after reading. It is passed to Day009 with `#text=`, so it is not sent to the server
 - External links use `rel="noopener noreferrer"` and send no referrer
 
 ---
@@ -250,9 +313,9 @@ npm test
 
 - Runs on the standard Node.js 22+ test runner (`node:test`) with no dependencies. GitHub Actions runs it on every push and pull request
 - Known answers were computed in Python (`pow(a, -1, 26)`, a separately written encryption, the extended Euclidean algorithm)
-- Encryption, decryption, inverses, key input checks, the mapping table, brute-force ranking and the "hard to tell apart" check, that the scoring table matches its generator output, and that the text excerpts are unchanged
+- Encryption, decryption, inverses, key input checks, the mapping table, the cases of solving from two known letters (compared with keys collected by brute force in Python), the order of frequency guesses, URL input, brute-force ranking and the "hard to tell apart" check, that the scoring table matches its generator output, and that the text excerpts are unchanged
 - index.html CSP, ARIA and labels, the Japanese and English dictionaries, color contrast (4.5:1 or more in light and dark), and line length
-- The examples, inverse table, accuracy table and directory tree in both READMEs are also checked against the implementation
+- The examples, inverse table, accuracy tables (brute force and frequency guesses) and directory tree in both READMEs are also checked against the implementation
 
 ---
 
@@ -268,16 +331,20 @@ affine-cipherlab/
 │   │   ├── screenshot.png        # Encryption and the mapping table
 │   │   ├── screenshot2.png       # A key that is not one-to-one
 │   │   ├── screenshot3.png       # Brute-force attack
-│   │   └── screenshot4.png       # A short ciphertext that is hard to tell apart
+│   │   ├── screenshot4.png       # A short ciphertext that is hard to tell apart
+│   │   ├── screenshot5.png       # Find the key from two known letters
+│   │   └── screenshot6.png       # Guess E and T from the most frequent letters
 │   ├── screenshot.png            # Screenshot for the Japanese README (encryption)
 │   ├── screenshot2.png           # Screenshot for the Japanese README (not one-to-one)
 │   ├── screenshot3.png           # Screenshot for the Japanese README (brute force)
-│   └── screenshot4.png           # Screenshot for the Japanese README (short ciphertext)
+│   ├── screenshot4.png           # Screenshot for the Japanese README (short ciphertext)
+│   ├── screenshot5.png           # Screenshot for the Japanese README (two known letters)
+│   └── screenshot6.png           # Screenshot for the Japanese README (E and T guesses)
 ├── css/                          # Styles
 │   └── style.css                 # Page styles (light and dark colors)
 ├── js/                           # Page scripts (plain scripts that work from file://)
-│   ├── accuracy.js               # Accuracy by length (generated by tools/evaluate.mjs)
-│   ├── affine-core.js            # Core (encryption, decryption, inverse, brute force)
+│   ├── accuracy.js               # Accuracy by length and of frequency guesses (generated by tools/evaluate.mjs)
+│   ├── affine-core.js            # Core (encryption, decryption, inverse, brute force, solving by hand)
 │   ├── english-data.js           # Adjacent letter pair table (generated by tools/build-english.mjs)
 │   ├── i18n.js                   # Language choice and static text
 │   ├── messages.js               # Japanese and English strings
