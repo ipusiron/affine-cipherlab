@@ -3,6 +3,7 @@
 //         node tools/evaluate.mjs eval（評価用の英文で長さ別の正答率を出す）
 //         node tools/evaluate.mjs write（その正答率を js/accuracy.js に書く）
 //         node tools/evaluate.mjs freq（多い文字を E・T と仮定する手順の正答率を出す）
+//         node tools/evaluate.mjs crib（既知の単語 THE・THAT を当てたとき、残る鍵の数を出す）
 import fs from 'node:fs';
 import { loadCore } from './load-core.mjs';
 
@@ -81,6 +82,29 @@ export function evaluateFrequency(corpus, { lengths = FREQ_LENGTHS, trials = TRI
   });
 }
 
+// 既知の単語（クリブ）を当てる手順。空白なしの暗号文で、平文がその単語を含んだ割合と、含んだときに残った鍵の数の平均・1位が正解の割合
+export const CRIB_WORDS = ['THE', 'THAT'];
+export const CRIB_LENGTHS = [50, 100, 200, 500];
+export function evaluateCrib(corpus, { words = CRIB_WORDS, lengths = CRIB_LENGTHS, trials = TRIALS, seed = SEED } = {}) {
+  const C = loadCore();
+  return words.map((word) => ({
+    word,
+    rows: lengths.map((len) => {
+      let contained = 0;
+      let keys = 0;
+      let top = 0;
+      for (const s of samples(corpus, len, trials, false, seed)) {
+        if (!s.plain.includes(word)) continue;
+        const r = C.cribSearch(s.cipher, word);
+        contained++;
+        keys += r.results.length;
+        if (r.results[0].a === s.a && r.results[0].b === s.b) top++;
+      }
+      return { len, contained, keys, top, trials };
+    })
+  }));
+}
+
 function tune() {
   const corpus = readCorpus('train-pg1342.txt');
   console.log('単語の重み（学習用の英文、空白あり、長さ 6・8・10・15・20 の平均）');
@@ -113,7 +137,12 @@ export function renderAccuracy() {
     `  spaces: [${rate(evaluate(corpus, { spaces: true }))}],`,
     `  noSpaces: [${rate(evaluate(corpus, { spaces: false }))}],`,
     '  // 多い文字を E・T と仮定する手順: [英字の数, 1つ目の仮定が正解の割合, 30通りのどれかに正解がある割合]',
-    `  frequency: [${evaluateFrequency(corpus).map((r) => `[${r.len}, ${pct(r.first, r.trials)}, ${pct(r.within, r.trials)}]`).join(', ')}]`,
+    `  frequency: [${evaluateFrequency(corpus).map((r) => `[${r.len}, ${pct(r.first, r.trials)}, ${pct(r.within, r.trials)}]`).join(', ')}],`,
+    '  // 既知の単語を当てる手順（空白なし）: { 単語: [[英字の数, 平文が単語を含んだ割合, 含んだときに残った鍵の数の平均, 含んだときに1位が正解の割合]] }',
+    '  crib: {',
+    evaluateCrib(corpus).map((c) => `    ${c.word}: [${c.rows.map((r) => `[${r.len}, ${pct(r.contained, r.trials)}, `
+      + `${(r.keys / r.contained).toFixed(2)}, ${pct(r.top, r.contained)}]`).join(', ')}]`).join(`,${String.fromCharCode(10)}`),
+    '  }',
     '};',
     ''
   ].join(String.fromCharCode(10));
@@ -127,6 +156,13 @@ if (process.argv[1] && process.argv[1].endsWith('evaluate.mjs')) {
   } else if (process.argv[2] === 'freq') {
     for (const r of evaluateFrequency(readCorpus('eval-pg98.txt'))) {
       console.log(`${r.len}字: 1つ目の仮定が正解 ${(100 * r.first / r.trials).toFixed(1)}% / どれかに正解 ${(100 * r.within / r.trials).toFixed(1)}%`);
+    }
+  } else if (process.argv[2] === 'crib') {
+    for (const c of evaluateCrib(readCorpus('eval-pg98.txt'))) {
+      for (const r of c.rows) {
+        console.log(`${c.word} ${r.len}字: 含む ${(100 * r.contained / r.trials).toFixed(1)}% / 残る鍵 平均 ${(r.keys / r.contained).toFixed(2)}`
+          + ` / 1位が正解 ${(100 * r.top / r.contained).toFixed(1)}%`);
+      }
     }
   } else {
     const corpus = readCorpus('eval-pg98.txt');

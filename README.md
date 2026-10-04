@@ -379,8 +379,8 @@ affine-cipherlab/
 ├── css/                          # スタイル
 │   └── style.css                 # 画面のスタイル（ライト・ダークの配色）
 ├── js/                           # 画面のスクリプト（通常のスクリプト、file://でも動く）
-│   ├── accuracy.js               # 長さ別の正答率と頻度の仮定の正答率（tools/evaluate.mjsの生成物）
-│   ├── affine-core.js            # 計算部（暗号化・復号・逆元・総当たり・手で解く）
+│   ├── accuracy.js               # 総当たり・頻度の仮定・クリブの正答率（tools/evaluate.mjsの生成物）
+│   ├── affine-core.js            # 計算部（暗号化・復号・逆元・総当たり・手で解く・練習問題）
 │   ├── english-data.js           # 隣り合う2文字の表（tools/build-english.mjsの生成物）
 │   ├── i18n.js                   # 言語の選択と静的な文言の差し替え
 │   ├── messages.js               # 日本語・英語の文言
@@ -391,13 +391,15 @@ affine-cipherlab/
 │   ├── contrast.test.js          # 配色のコントラスト
 │   ├── core.test.js              # 暗号化・復号・逆元・入力の検査（既知解答）
 │   ├── crack.test.js             # 総当たり・採点の表・英文の抜粋
+│   ├── crib.test.js              # 既知の単語（クリブ）を当てる
 │   ├── format.test.js            # 行の長さ・改行コード
 │   ├── html.test.js              # CSP・ARIA・ラベル・辞書との一致
 │   ├── i18n.test.js              # 言語の選択
 │   ├── load.js                   # 通常のスクリプトをテストに読み込む
 │   ├── messages.test.js          # 日英の辞書
+│   ├── quiz.test.js              # 練習問題（問題番号・答え・例文）
 │   ├── readme.test.js            # READMEの表・ツリー・画像
-│   └── solve.test.js             # 既知の2組から鍵を解く・頻度による仮定・URLの受け取り
+│   └── solve.test.js             # 既知の組から鍵を解く（3組目以降も）・頻度による仮定・URLの受け取り
 ├── tools/                        # 開発用のスクリプト（画面では使わない）
 │   ├── corpus/                   # 英文の抜粋（Project Gutenberg）
 │   │   ├── eval-pg98.txt         # 評価用: A Tale of Two Cities（#98）

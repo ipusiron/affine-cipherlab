@@ -281,6 +281,183 @@
     });
   }
 
+  // ===== 手で解く: 3つ目以降の組で絞り込む =====
+  // 既知の組（平文字 → 暗号文字）がいくつあっても解く。最初の組と、平文字が最初と違う最初の組の2つで鍵を解き（solveFromPairs）、
+  // 残りの組で a·p + b ≡ c を満たす鍵だけを残す。同じ組の重複は1つとみなし、同じ平文字に別の暗号文字があれば矛盾
+  function solveFromKnown(pairs) {
+    const idx = pairs.map(([p, c]) => [letterIndex(p), letterIndex(c)]);
+    const bad = idx.findIndex(([p, c]) => p === null || c === null);
+    if (bad >= 0) return { ok: false, reason: 'notLetter', pair: bad, checks: [], keys: [] };
+    for (let j = 1; j < idx.length; j++) {
+      const i = idx.slice(0, j).findIndex(([p, c]) => p === idx[j][0] && c !== idx[j][1]);
+      if (i >= 0) return { ok: false, reason: 'contradiction', conflict: [i, j], checks: [], keys: [] };
+    }
+    const second = idx.findIndex(([p]) => p !== idx[0][0]);
+    if (second < 0) return { ok: false, reason: 'samePair', checks: [], keys: [] };
+    const base = solveFromPairs(...[idx[0], idx[second]].flat().map((i) => String.fromCharCode(65 + i)));
+    const head = { base, basePairs: [0, second], checks: [] };
+    if (!base.ok) return { ...head, ok: false, reason: base.reason, keys: [] };
+    let keys = base.keys;
+    idx.forEach(([p, c], k) => {
+      if (k === 0 || k === second || idx.slice(0, k).some(([q]) => q === p)) return;
+      const got = (key) => mod(key.a * p + key.b, N);
+      const kept = keys.filter((key) => got(key) === c);
+      const removed = keys.filter((key) => got(key) !== c).map((key) => ({ ...key, got: got(key) }));
+      head.checks.push({ pair: k, p, c, before: keys.length, kept, removed });
+      keys = kept;
+    });
+    const reason = keys.length === 0 ? 'eliminated' : keys.length > 1 ? 'several' : null;
+    return { ...head, ok: keys.length > 0, reason, keys };
+  }
+
+  // ===== 手で解く: 既知の単語（クリブ）を当てる =====
+  // 文字列の英字だけを 0〜25 の並びにする（大文字・小文字を区別しない）
+  function lettersOf(text) {
+    const out = [];
+    for (const ch of String(text ?? '')) {
+      const code = ch.toUpperCase().charCodeAt(0);
+      if (code >= 65 && code <= 90) out.push(code - 65);
+    }
+    return out;
+  }
+
+  // 単語と、暗号文の pos からの並びで、同じ文字の位置がそろうか（1対1の置き換えなら、同じ文字は同じ文字に、違う文字は違う文字になる）
+  function samePattern(word, seq, pos) {
+    const toCipher = new Array(N).fill(-1);
+    const toPlain = new Array(N).fill(-1);
+    for (let k = 0; k < word.length; k++) {
+      const p = word[k];
+      const c = seq[pos + k];
+      if (toCipher[p] === -1 && toPlain[c] === -1) {
+        toCipher[p] = c;
+        toPlain[c] = p;
+      } else if (toCipher[p] !== c || toPlain[c] !== p) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // 平文に含まれていそうな単語（クリブ）を、暗号文の英字の並びの各位置に当てる。
+  // 1) 文字の並びがそろう位置だけを残す 2) 単語の1文字目と、1文字目と違う最初の文字の2組から鍵を解く 3) 残りの文字で確かめる。
+  // 合った鍵ごとに位置（英字の何字目か、0 から）をまとめ、戻した文の英語らしさの順に並べる。英字以外の文字は単語・暗号文とも無視する
+  function cribSearch(cipher, crib) {
+    const word = lettersOf(crib);
+    const wordText = word.map((i) => String.fromCharCode(65 + i)).join('');
+    if (word.length < 2) return { ok: false, reason: 'cribShort', word: wordText, results: [] };
+    const second = word.findIndex((x) => x !== word[0]);
+    if (second < 0) return { ok: false, reason: 'cribSame', word: wordText, results: [] };
+    const seq = lettersOf(cipher);
+    if (seq.length < word.length) return { ok: false, reason: 'cribLong', word: wordText, letters: seq.length, results: [] };
+    const L = (i) => String.fromCharCode(65 + i);
+    const positions = seq.length - word.length + 1;
+    const rejected = { pattern: 0, noKey: 0, mismatch: 0 };
+    const found = new Map();
+    let matched = 0;
+    for (let pos = 0; pos < positions; pos++) {
+      if (!samePattern(word, seq, pos)) {
+        rejected.pattern++;
+        continue;
+      }
+      const r = solveFromPairs(L(word[0]), L(seq[pos]), L(word[second]), L(seq[pos + second]));
+      if (!r.ok) {
+        rejected.noKey++;
+        continue;
+      }
+      const keys = r.keys.filter((key) => word.every((p, k) => mod(key.a * p + key.b, N) === seq[pos + k]));
+      if (!keys.length) {
+        rejected.mismatch++;
+        continue;
+      }
+      matched++;
+      for (const key of keys) {
+        const id = key.a * N + key.b;
+        if (!found.has(id)) found.set(id, { a: key.a, b: key.b, positions: [] });
+        found.get(id).positions.push(pos);
+      }
+    }
+    const text = prefixByLetters(String(cipher ?? ''), SCORE_LETTERS);
+    const results = [...found.values()].map((k) => {
+      const preview = applyMap(text, decryptMap(k.a, k.b));
+      return { ...k, preview, score: englishScore(preview).score };
+    });
+    results.sort((x, y) => y.score - x.score || y.positions.length - x.positions.length || x.a - y.a || x.b - y.b);
+    return { ok: true, word: wordText, second, letters: seq.length, positions, rejected, matched, results };
+  }
+
+  // クリブを pos に当てたときの組（平文字 → 暗号文字）。同じ平文字は1つにまとめ、最大 max 組
+  function cribPairsAt(cipher, crib, pos, max = 6) {
+    const word = lettersOf(crib);
+    const seq = lettersOf(cipher);
+    const pairs = [];
+    const seen = new Set();
+    word.forEach((p, k) => {
+      if (seen.has(p) || pairs.length >= max || pos + k >= seq.length) return;
+      seen.add(p);
+      pairs.push([String.fromCharCode(65 + p), String.fromCharCode(65 + seq[pos + k])]);
+    });
+    return pairs;
+  }
+
+  // ===== 練習問題（問題番号ごとに同じ問題が出る） =====
+  // 短い暗号文の問題に使う英語のことわざ・定番の例文（大文字・空白区切り）。どれも総当たりの1位で元に戻り、1位と2位の差が3以上（test/quiz.test.js）
+  const PROVERBS = [
+    'KNOWLEDGE IS POWER', 'TIME IS MONEY', 'PRACTICE MAKES PERFECT', 'BETTER LATE THAN NEVER', 'ACTIONS SPEAK LOUDER THAN WORDS',
+    'THE EARLY BIRD CATCHES THE WORM', 'WHERE THERE IS A WILL THERE IS A WAY', 'HONESTY IS THE BEST POLICY', 'ALL THAT GLITTERS IS NOT GOLD',
+    'A FRIEND IN NEED IS A FRIEND INDEED', 'LOOK BEFORE YOU LEAP', 'EASY COME EASY GO', 'NO NEWS IS GOOD NEWS', 'SLOW AND STEADY WINS THE RACE',
+    'THE PEN IS MIGHTIER THAN THE SWORD', 'ROME WAS NOT BUILT IN A DAY', 'TWO HEADS ARE BETTER THAN ONE', 'WHEN IN ROME DO AS THE ROMANS DO',
+    'BIRDS OF A FEATHER FLOCK TOGETHER', 'THE BEST THINGS IN LIFE ARE FREE', 'PRACTICE WHAT YOU PREACH', 'SEEING IS BELIEVING',
+    'FORTUNE FAVORS THE BOLD', 'A PICTURE IS WORTH A THOUSAND WORDS', 'MEET ME AFTER THE TOGA PARTY', 'THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG'
+  ];
+  const QUIZ_MAX_SEED = 999999;
+
+  // 問題番号から決まる乱数（xorshift32。番号をかき混ぜてから使う）
+  function quizRandom(seed) {
+    let s = (Math.imul(Number(seed) >>> 0, 2654435761) ^ 0x5bd1e995) >>> 0 || 1;
+    const next = () => {
+      s ^= s << 13;
+      s >>>= 0;
+      s ^= s >>> 17;
+      s ^= s << 5;
+      s >>>= 0;
+      return s / 4294967296;
+    };
+    for (let i = 0; i < 4; i++) next();
+    return next;
+  }
+
+  // 5問: 逆元・1文字の暗号化・1文字の復号・既知の2組から鍵・短い暗号文から鍵。a=1・25 は手で計算しても練習にならないので使わない
+  function makeQuiz(seed) {
+    const rnd = quizRandom(seed);
+    const int = (n) => Math.floor(rnd() * n);
+    const pick = (xs) => xs[int(xs.length)];
+    const A = VALID_A.filter((a) => a !== 1 && a !== 25);
+    const key = () => ({ a: pick(A), b: int(N) });
+    const inv = pick(A);
+    const enc = { ...key(), m: int(N) };
+    const dec = { ...key(), c: int(N) };
+    const two = key();
+    const p1 = int(N);
+    let p2 = int(N);
+    while (gcd(p1 - p2, N) !== 1) p2 = int(N);
+    const text = { ...key(), plain: pick(PROVERBS) };
+    return [
+      { type: 'inverse', a: inv, answer: modInverse(inv) },
+      { type: 'encrypt', a: enc.a, b: enc.b, m: enc.m, answer: mod(enc.a * enc.m + enc.b, N) },
+      { type: 'decrypt', a: dec.a, b: dec.b, c: dec.c, answer: decryptMap(dec.a, dec.b)[dec.c] },
+      { type: 'pairs', pairs: [p1, p2].map((p) => [p, mod(two.a * p + two.b, N)]), answer: { a: two.a, b: two.b } },
+      { type: 'text', plain: text.plain, cipher: encrypt(text.plain, text.a, text.b), answer: { a: text.a, b: text.b } }
+    ];
+  }
+
+  // 答え合わせ。逆元は整数、1文字の問題は英字1文字（大文字・小文字を問わない）、鍵の問題は { a, b } の整数
+  function checkQuizAnswer(q, input) {
+    const int = (s) => (/^[+-]?[0-9]+$/.test(String(s ?? '').trim()) ? Number(String(s).trim()) : null);
+    if (q.type === 'inverse') return int(input) === q.answer;
+    if (q.type === 'encrypt' || q.type === 'decrypt') return letterIndex(input) === q.answer;
+    return int(input && input.a) === q.answer.a && int(input && input.b) === q.answer.b;
+  }
+
   // ===== URL で受け取る（「#」より後ろを先に読む。シリーズのほかのツールと同じ） =====
   function linkParams(search, hash) {
     const fromHash = new URLSearchParams(String(hash || '').replace(/^#/, ''));
@@ -303,6 +480,7 @@
     N, VALID_A, MAX_TEXT, SCORE_LETTERS, WORD_WEIGHT, CLOSE_MARGIN, COMMON_WORDS, HYPOTHESIS_LETTERS,
     mod, gcd, egcd, modInverse, isValidA, parseKey, encryptMap, decryptMap, applyMap, preprocess, encrypt, decrypt,
     letterSet, letterCount, fullwidthLetterCount, mappingRows, bigramScore, wordHits, englishScore, prefixByLetters, bruteForce,
-    letterIndex, solveFromPairs, letterFrequencies, frequencyHypotheses, linkParams, urlWithoutText
+    letterIndex, solveFromPairs, letterFrequencies, frequencyHypotheses, linkParams, urlWithoutText,
+    solveFromKnown, lettersOf, samePattern, cribSearch, cribPairsAt, PROVERBS, QUIZ_MAX_SEED, quizRandom, makeQuiz, checkQuizAnswer
   };
 })();
