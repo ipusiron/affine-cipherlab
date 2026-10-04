@@ -323,6 +323,7 @@
   // ===== 言語を切り替えたあとの描き直し =====
   function renderAll() {
     I18n.applyStaticText();
+    globalThis.AffineTheme.refresh($('btn-theme'));
     refreshEncrypt();
     refreshDecrypt();
     refreshCrack();
@@ -334,7 +335,13 @@
   document.addEventListener('DOMContentLoaded', () => {
     I18n.init();
     I18n.applyStaticText();
+    globalThis.AffineTheme.refresh($('btn-theme'));
     initTabs();
+    $('btn-theme').addEventListener('click', () => globalThis.AffineTheme.toggle($('btn-theme')));
+    $('btn-lang').addEventListener('click', () => {
+      I18n.set(I18n.lang === 'ja' ? 'en' : 'ja');
+      renderAll();
+    });
 
     for (const s of SECTIONS) {
       for (const k of ['a', 'b']) $(`${k}-${s}`).addEventListener('input', () => syncKeys(s));

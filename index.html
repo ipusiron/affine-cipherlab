@@ -10,12 +10,20 @@
   <meta name="author" content="ipusiron">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="data:,">
+  <script src="js/theme-init.js"></script>
   <title>Affine CipherLab</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <header class="site-header">
-    <h1>Affine CipherLab</h1>
+    <div class="header-row">
+      <h1>Affine CipherLab</h1>
+      <div class="header-actions">
+        <button type="button" id="btn-lang" class="icon-btn lang-btn" data-i18n="ui.langButton" data-i18n-attr="aria-label:ui.langLabel;title:ui.langLabel"
+          aria-label="Switch to English" title="Switch to English">English</button>
+        <button type="button" id="btn-theme" class="icon-btn" aria-label="ダークモードに切り替える" title="ダークモードに切り替える">🌙</button>
+      </div>
+    </div>
     <p data-i18n="ui.subtitle">古典暗号「アフィン暗号」を学習・体験できるツール</p>
   </header>
 
@@ -150,18 +158,57 @@
           <li><a href="https://ipusiron.github.io/cipher-clairvoyance/" target="_blank" rel="noopener noreferrer">Cipher Clairvoyance（Day044）</a>：暗号文がどの方式らしいかを見積もる</li>
         </ul>
       </article>
+      <article class="learn" lang="en" data-lang="en" hidden>
+        <h3>Definition</h3>
+        <p>Letters are turned into numbers A=0, B=1, …, Z=25 and converted with n=26 as follows.</p>
+        <p class="formula">Encrypt: Enc(m) = (a·m + b) mod 26<br>Decrypt: Dec(c) = a⁻¹·(c − b) mod 26</p>
+        <p>a⁻¹ is the inverse of a (the number for which a·a⁻¹ leaves remainder 1 when divided by 26). Characters other than letters are kept as they are, and upper and lower case are preserved.</p>
+
+        <h3>Why a must be coprime to 26</h3>
+        <p>Only when gcd(a, 26) = 1 does a⁻¹ exist, so the text can be decrypted.
+        With a=2, for example, A (0) and N (13) both map to the same letter because 2·0 = 0 and 2·13 = 26 ≡ 0, so the original letter cannot be recovered from the ciphertext.
+        The 12 values of a coprime to 26 are 1, 3, 5, 7, 9, 11, 15, 17, 19, 21, 23 and 25.</p>
+
+        <h3>Finding the inverse (a=5)</h3>
+        <p>The extended Euclidean algorithm finds t such that 26·s + 5·t = 1.</p>
+        <p class="formula">26 = 5·5 + 1, so 1 = 26·1 + 5·(−5)<br>Therefore a⁻¹ ≡ −5 ≡ 21 (5·21 = 105 = 26·4 + 1)</p>
+
+        <h3>Special cases</h3>
+        <ul>
+          <li>a=1 is a shift cipher (b=3 is the Caesar cipher, b=13 is ROT13)</li>
+          <li>b=0 is a multiplicative cipher (multiplication only)</li>
+          <li>a=25, b=25 is Atbash (A↔Z, B↔Y and so on; since 25 ≡ −1, Enc(m) = 25 − m)</li>
+        </ul>
+
+        <h3>How the brute-force attack works</h3>
+        <ol>
+          <li>Decrypt the ciphertext with all 312 keys (12 choices of a × 26 of b)</li>
+          <li>Score how English each result looks: the sum of log-likelihoods of adjacent letter pairs (a table built from about 160,000 letters of Pride and Prejudice), plus 4 × the number of common English words (2+ letters)</li>
+          <li>Rank by score. If the gap between the first and second candidates is under 3, the tool says they are hard to tell apart</li>
+        </ol>
+        <p>Short texts are easier to get wrong. The README lists how often the first candidate was correct on an evaluation text (A Tale of Two Cities). If the plaintext is not English, this scoring cannot be trusted.</p>
+
+        <h3>Related tools</h3>
+        <ul class="related">
+          <li><a href="https://ipusiron.github.io/caesar-cipher-breaker/" target="_blank" rel="noopener noreferrer">Caesar Cipher Breaker (Day008)</a>: brute-force the Caesar cipher (a=1)</li>
+          <li><a href="https://ipusiron.github.io/frequency-analyzer/" target="_blank" rel="noopener noreferrer">Frequency Analyzer (Day009)</a>: look at letter frequencies in detail</li>
+          <li><a href="https://ipusiron.github.io/vigenere-cipher-tool/" target="_blank" rel="noopener noreferrer">Vigenère Cipher Tool (Day017)</a>: a polyalphabetic cipher that changes the shift for each key letter</li>
+          <li><a href="https://ipusiron.github.io/playfair-cipherlab/" target="_blank" rel="noopener noreferrer">Playfair CipherLab (Day027)</a>: a cipher that replaces two letters at a time</li>
+          <li><a href="https://ipusiron.github.io/cipher-clairvoyance/" target="_blank" rel="noopener noreferrer">Cipher Clairvoyance (Day044)</a>: estimate which cipher a ciphertext looks like</li>
+        </ul>
+      </article>
     </section>
   </main>
 
   <footer class="footer">
-    <span data-i18n="ui.repo">🔗 GitHubリポジトリはこちら</span>
-    （<a href="https://github.com/ipusiron/affine-cipherlab" target="_blank" rel="noopener noreferrer">ipusiron/affine-cipherlab</a>）
+    <span data-i18n="ui.repo">🔗 GitHubリポジトリ</span><a href="https://github.com/ipusiron/affine-cipherlab" target="_blank" rel="noopener noreferrer">ipusiron/affine-cipherlab</a>
   </footer>
 
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="js/messages.js" defer></script>
   <script src="js/i18n.js" defer></script>
+  <script src="js/theme.js" defer></script>
   <script src="js/english-data.js" defer></script>
   <script src="js/accuracy.js" defer></script>
   <script src="js/affine-core.js" defer></script>

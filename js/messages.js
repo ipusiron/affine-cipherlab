@@ -5,7 +5,7 @@
   const ja = {
     'ui.subtitle': '古典暗号「アフィン暗号」を学習・体験できるツール',
     'ui.tabsLabel': '機能の切り替え',
-    'ui.repo': '🔗 GitHubリポジトリはこちら',
+    'ui.repo': '🔗 GitHubリポジトリ',
     'tab.encrypt': '暗号化',
     'tab.decrypt': '復号',
     'tab.crack': '総当たり解読',
@@ -73,10 +73,95 @@
     'toast.noCipher': '先に暗号化タブで暗号文を作ってください。',
     'toast.set': 'a={a}, b={b}を写像表に入れました。',
     'key.a': 'a',
-    'key.b': 'b'
+    'key.b': 'b',
+    'ui.langButton': 'English',
+    'ui.langLabel': 'Switch to English',
+    'theme.toDark': 'ダークモードに切り替える',
+    'theme.toLight': 'ライトモードに切り替える'
   };
 
-  const MESSAGES = { ja };
+  const en = {
+    'ui.subtitle': 'A tool to learn and try the classical affine cipher',
+    'ui.tabsLabel': 'Choose a function',
+    'ui.repo': '🔗 GitHub repository',
+    'tab.encrypt': 'Encrypt',
+    'tab.decrypt': 'Decrypt',
+    'tab.crack': 'Brute force',
+    'tab.learn': 'Learn',
+    'enc.heading': 'Encrypt',
+    'enc.input': 'Plaintext',
+    'enc.placeholder': 'Enter the plaintext',
+    'dec.heading': 'Decrypt',
+    'dec.input': 'Ciphertext',
+    'dec.placeholder': 'Enter the ciphertext',
+    'crack.heading': 'Brute-force attack',
+    'crack.lead': 'Decrypts the ciphertext with all 312 keys (12 choices of a × 26 of b) and ranks the results by how English they look.',
+    'crack.legend': 'English score = sum of log-likelihoods of adjacent letter pairs + 4 × common English words (higher looks more English). '
+      + 'Words = number of common English words (2+ letters).',
+    'learn.heading': 'Learn',
+    'key.hint': 'Valid values of a are 1, 3, 5, 7, 9, 11, 15, 17, 19, 21, 23 and 25 (coprime to 26); b is an integer from 0 to 25.',
+    'opt.stripSpaces': 'Remove spaces',
+    'opt.stripSymbols': 'Remove symbols (keep only letters and spaces)',
+    'btn.encrypt': 'Encrypt',
+    'btn.decrypt': 'Decrypt',
+    'btn.crack': 'Analyze',
+    'btn.copy': '📋 Copy',
+    'btn.sync': '🔄 Use the ciphertext and key from the Encrypt tab',
+    'btn.set': 'Show in table',
+    'out.cipher': 'Ciphertext',
+    'out.plain': 'Decrypted text',
+    'out.candidates': 'Candidates',
+
+    'err.empty': 'Enter {name}.',
+    'err.notInteger': '{name} must be an integer.',
+    'err.aRange': 'a must be an integer from 1 to 25.',
+    'err.bRange': 'b must be an integer from 0 to 25.',
+    'warn.notCoprime': 'a={a} is not coprime to 26 (gcd({a}, 26) = {gcd}). '
+      + 'Encryption is not one-to-one: two or more plaintext letters map to the same ciphertext letter, so it cannot be decrypted.',
+    'warn.decryptBlocked': 'a={a} is not coprime to 26 (gcd({a}, 26) = {gcd}), so it has no inverse a⁻¹ and cannot decrypt. Choose a valid a.',
+    'note.notInjective': 'Because a is not coprime to 26, this ciphertext cannot be turned back (red rows in the table).',
+    'note.fullwidth': '{n} full-width letters are not converted. Change them to half-width letters to convert them.',
+    'err.tooLong': 'Longer than {max} characters ({n}).',
+    'err.noLetters': 'There are no letters (A–Z).',
+
+    'map.heading': 'Mapping table (a={a}, b={b}, n=26)',
+    'map.dup': 'Red rows are letters that share a ciphertext letter with another plaintext letter (not one-to-one).',
+    'map.left': 'A–M',
+    'map.right': 'N–Z',
+    'map.plain': 'Plain',
+    'map.cipher': 'Cipher',
+    'map.caption': 'Mapping of {range}',
+
+    'crack.status': 'Decrypted {letters} letters with all 312 keys and listed the top {top} by English score.',
+    'crack.statusScored': 'Scored the first {scored} of {letters} letters and listed the top {top} by English score.',
+    'crack.close': 'The gap between the first and second candidates is only {margin}, so they are hard to tell apart. Read the lower candidates too.',
+    'crack.short': 'With only {letters} letters, the first candidate can be wrong. '
+      + 'On the evaluation text, the first candidate was correct {rate}% of the time at {len} letters ({spaces}).',
+    'crack.spaces': 'with word spaces',
+    'crack.noSpaces': 'without spaces',
+    'crack.col.rank': 'Rank',
+    'crack.col.a': 'a',
+    'crack.col.b': 'b',
+    'crack.col.score': 'English score',
+    'crack.col.words': 'Words',
+    'crack.col.text': 'Decrypted text (start)',
+    'crack.col.action': 'Action',
+    'crack.caption': 'Brute-force candidates (top {top})',
+
+    'toast.copied': 'Copied to the clipboard.',
+    'toast.copyFailed': 'Could not copy. Select the field and copy it.',
+    'toast.synced': 'Filled in the ciphertext and key.',
+    'toast.noCipher': 'Make a ciphertext on the Encrypt tab first.',
+    'toast.set': 'Set a={a}, b={b} in the mapping table.',
+    'key.a': 'a',
+    'key.b': 'b',
+    'ui.langButton': '日本語',
+    'ui.langLabel': '日本語に切り替える',
+    'theme.toDark': 'Switch to dark mode',
+    'theme.toLight': 'Switch to light mode'
+  };
+
+  const MESSAGES = { ja, en };
 
   function t(key, vars = {}, lang) {
     const dict = MESSAGES[lang || (globalThis.AffineI18n && globalThis.AffineI18n.lang) || 'ja'] || ja;
