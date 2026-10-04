@@ -1,0 +1,8 @@
+{
+  "name": "affine-cipherlab",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  }
+}
