@@ -1,6 +1,7 @@
 // 総当たりの1位が正解になる割合を、決まった種の乱数で測る（README の表とテストで使う）
 // 使い方: node tools/evaluate.mjs tune（学習用の英文で単語の重みと「見分けにくい」の境目を選ぶ）
 //         node tools/evaluate.mjs eval（評価用の英文で長さ別の正答率を出す）
+//         node tools/evaluate.mjs write（その正答率を js/accuracy.js に書く）
 import fs from 'node:fs';
 import { loadCore } from './load-core.mjs';
 
@@ -81,9 +82,29 @@ function tune() {
   }
 }
 
+// 評価用の英文での正答率を js/accuracy.js の形にする（画面で「英字が少ないと外れやすい」と知らせるのに使う）
+export function renderAccuracy() {
+  const corpus = readCorpus('eval-pg98.txt');
+  const rate = (rows) => rows.map((r) => `[${r.len}, ${(100 * r.correct / r.trials).toFixed(1)}]`).join(', ');
+  return [
+    '// 生成物（tools/evaluate.mjs write が tools/corpus/eval-pg98.txt から作る。手で編集しない）',
+    `// 総当たりの1位が正解になった割合（%）。[英字の数, 割合]。各${TRIALS}回、乱数の種 ${SEED}`,
+    'globalThis.AffineAccuracy = {',
+    "  source: 'Project Gutenberg #98 A Tale of Two Cities (tools/corpus/eval-pg98.txt)',",
+    `  trials: ${TRIALS},`,
+    `  spaces: [${rate(evaluate(corpus, { spaces: true }))}],`,
+    `  noSpaces: [${rate(evaluate(corpus, { spaces: false }))}]`,
+    '};',
+    ''
+  ].join(String.fromCharCode(10));
+}
+
 if (process.argv[1] && process.argv[1].endsWith('evaluate.mjs')) {
   if (process.argv[2] === 'tune') tune();
-  else {
+  else if (process.argv[2] === 'write') {
+    fs.writeFileSync(new URL('../js/accuracy.js', import.meta.url), renderAccuracy());
+    console.log('wrote js/accuracy.js');
+  } else {
     const corpus = readCorpus('eval-pg98.txt');
     for (const spaces of [true, false]) {
       const rows = evaluate(corpus, { spaces });
