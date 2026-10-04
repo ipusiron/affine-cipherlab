@@ -25,8 +25,8 @@ test('HTML に style 属性・インラインのスクリプト・イベント�
 test('タブは WAI-ARIA の形（tablist・tab・tabpanel、aria-controls の先が実在）', () => {
   assert.match(html, /role="tablist"/);
   const tabs = [...html.matchAll(/role="tab" id="(tab-[a-z]+)" data-tab="([a-z]+)" aria-controls="([a-z]+)" aria-selected="(true|false)"/g)];
-  assert.equal(tabs.length, 4);
-  assert.deepEqual(tabs.map((m) => m[4]), ['true', 'false', 'false', 'false']);
+  assert.equal(tabs.length, 5);
+  assert.deepEqual(tabs.map((m) => m[4]), ['true', 'false', 'false', 'false', 'false']);
   for (const [, id, , panel] of tabs) assert.match(html, new RegExp(`id="${panel}" class="tab-content[^"]*" role="tabpanel" aria-labelledby="${id}"`), id);
 });
 

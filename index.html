@@ -34,6 +34,8 @@
       data-i18n="tab.decrypt">復号</button>
     <button type="button" class="tab-button" role="tab" id="tab-crack" data-tab="crack" aria-controls="crack" aria-selected="false" tabindex="-1"
       data-i18n="tab.crack">総当たり解読</button>
+    <button type="button" class="tab-button" role="tab" id="tab-solve" data-tab="solve" aria-controls="solve" aria-selected="false" tabindex="-1"
+      data-i18n="tab.solve">手で解く</button>
     <button type="button" class="tab-button" role="tab" id="tab-learn" data-tab="learn" aria-controls="learn" aria-selected="false" tabindex="-1"
       data-i18n="tab.learn">座学</button>
   </nav>
@@ -47,6 +49,13 @@
         <input type="number" id="a-encrypt" value="5" min="1" max="25" step="1" inputmode="numeric" aria-describedby="key-hint-encrypt">
         <label for="b-encrypt">b</label>
         <input type="number" id="b-encrypt" value="8" min="0" max="25" step="1" inputmode="numeric" aria-describedby="key-hint-encrypt">
+      </div>
+      <div class="presets" role="group" data-i18n-attr="aria-label:preset.label" aria-label="特殊な場合">
+        <span class="presets-label" data-i18n="preset.label">特殊な場合</span>
+        <button type="button" class="small-btn preset-btn" data-a="1" data-b="3" data-i18n="preset.caesar">シーザー（a=1, b=3）</button>
+        <button type="button" class="small-btn preset-btn" data-a="1" data-b="13" data-i18n="preset.rot13">ROT13（a=1, b=13）</button>
+        <button type="button" class="small-btn preset-btn" data-a="25" data-b="25" data-i18n="preset.atbash">アトバシュ（a=25, b=25）</button>
+        <button type="button" class="small-btn preset-btn" data-a="3" data-b="0" data-i18n="preset.mult">乗算暗号（a=3, b=0）</button>
       </div>
       <p id="key-hint-encrypt" class="hint" data-i18n="key.hint">有効なaは1, 3, 5, 7, 9, 11, 15, 17, 19, 21, 23, 25（26と互いに素な数）、bは0〜25の整数です。</p>
       <div class="alert alert-key" id="key-alert-encrypt" role="status" aria-live="polite" hidden></div>
@@ -114,8 +123,48 @@
         <p class="hint" data-i18n="crack.legend">英語らしさ＝隣り合う2文字の対数尤度の和＋よく使う英単語の数×4（大きいほど英語らしい）。単語＝よく使う英単語（2文字以上）の数。</p>
         <div id="crack-status" class="crack-status" role="status" aria-live="polite"></div>
         <div id="crack-results" class="table-wrap"></div>
+        <p id="crack-links" class="crack-links"></p>
       </div>
       <div id="mapping-crack" class="mapping-panel"></div>
+    </section>
+
+    <!--手で解く-->
+    <section id="solve" class="tab-content" role="tabpanel" aria-labelledby="tab-solve" hidden>
+      <h2 data-i18n="solve.heading">手で解く（Solve）</h2>
+      <h3 data-i18n="solve.pairsHeading">既知の2文字から鍵を解く</h3>
+      <p class="hint" data-i18n="solve.pairsLead">平文の文字と暗号文の文字の組が2つ分かれば、2つの式を連立してa・bを求められます。</p>
+      <div class="pairs">
+        <div class="pair">
+          <span class="pair-name" data-i18n="solve.pair1">組1</span>
+          <label for="p1" data-i18n="solve.plain">平文字</label>
+          <input type="text" id="p1" class="letter-input" maxlength="1" value="E" autocomplete="off" spellcheck="false">
+          <span aria-hidden="true">→</span>
+          <label for="c1" data-i18n="solve.cipher">暗号文字</label>
+          <input type="text" id="c1" class="letter-input" maxlength="1" value="C" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="pair">
+          <span class="pair-name" data-i18n="solve.pair2">組2</span>
+          <label for="p2" data-i18n="solve.plain">平文字</label>
+          <input type="text" id="p2" class="letter-input" maxlength="1" value="T" autocomplete="off" spellcheck="false">
+          <span aria-hidden="true">→</span>
+          <label for="c2" data-i18n="solve.cipher">暗号文字</label>
+          <input type="text" id="c2" class="letter-input" maxlength="1" value="Z" autocomplete="off" spellcheck="false">
+        </div>
+      </div>
+      <button type="button" id="solve-btn" class="primary" data-i18n="btn.solve">解く</button>
+      <div id="solve-result" class="output solve-result" role="status" aria-live="polite" hidden></div>
+
+      <h3 data-i18n="solve.freqHeading">多い文字をE・Tと仮定して解く</h3>
+      <p class="hint" data-i18n="solve.freqLead">英文ではEとTがとくに多いので、暗号文で多い文字をE・Tと仮定すれば、上と同じ方法で鍵を解けます。多い順の上位6文字から30通りを試します。</p>
+      <div class="input-header">
+        <label for="freq-input" class="field-label" data-i18n="dec.input">暗号文</label>
+        <button type="button" class="copy-btn sync-btn" id="freq-from-crack" data-i18n="btn.fromCrack">🔄 総当たりタブの暗号文を入れる</button>
+      </div>
+      <textarea id="freq-input" rows="4" spellcheck="false" data-i18n-attr="placeholder:dec.placeholder" placeholder="暗号文を入力してください"></textarea>
+      <div class="alert alert-input" id="input-alert-solve" role="status" aria-live="polite" hidden></div>
+      <button type="button" id="freq-btn" class="primary" data-i18n="btn.freq">仮定を並べる</button>
+      <div id="freq-status" class="crack-status" role="status" aria-live="polite"></div>
+      <div id="freq-results" class="table-wrap"></div>
     </section>
 
     <!--座学-->
@@ -197,6 +246,13 @@
           <li><a href="https://ipusiron.github.io/cipher-clairvoyance/" target="_blank" rel="noopener noreferrer">Cipher Clairvoyance (Day044)</a>: estimate which cipher a ciphertext looks like</li>
         </ul>
       </article>
+      <div class="calc">
+        <h3 data-i18n="calc.heading">逆元の計算機（拡張ユークリッドの互除法）</h3>
+        <p class="hint" data-i18n="calc.lead">aを選ぶと、26·s + a·t = rの行を、rが0になるまで並べます。rが1になった行のtを26で割った余りがa⁻¹です。</p>
+        <label for="calc-a" class="field-label">a</label>
+        <select id="calc-a"></select>
+        <div id="calc-result" class="table-wrap" aria-live="polite"></div>
+      </div>
     </section>
   </main>
 
