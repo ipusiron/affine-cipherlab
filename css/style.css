@@ -422,6 +422,97 @@ button:disabled {
 .crack-table tbody tr:nth-child(even) { background: var(--row-alt); }
 .crack-table tr.top td { font-weight: 600; }
 
+/* ===== 特殊な場合のボタン ===== */
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 4px;
+}
+
+.presets-label { font-size: 14px; color: var(--muted); font-weight: 600; }
+
+/* ===== 手で解く ===== */
+#solve h3 { margin: 22px 0 6px; font-size: 17px; }
+#solve h3:first-of-type { margin-top: 4px; }
+
+.pairs { display: grid; gap: 8px; margin: 8px 0; }
+
+.pair {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+}
+
+.pair-name { font-weight: 600; min-width: 3.5em; }
+
+.letter-input {
+  width: 52px;
+  min-height: 44px;
+  font-size: 18px;
+  text-align: center;
+  text-transform: uppercase;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.letter-input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+
+.steps { margin: 4px 0 8px; padding-left: 1.4em; font-size: 15px; }
+.steps li { margin: 4px 0; }
+
+.solve-result p.ok, .crack-status p.ok, .calc p.ok { color: var(--text); font-weight: 600; margin: 6px 0; }
+
+.solve-result p.warn, .calc p.warn {
+  color: var(--warn-text);
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+}
+
+.key-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.crack-links { margin: 10px 0 0; font-size: 15px; }
+
+/* ===== 座学の計算機 ===== */
+.calc {
+  margin-top: 20px;
+  padding: 12px 16px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+
+.calc h3 { margin: 4px 0 6px; font-size: 17px; }
+
+.calc select {
+  min-height: 44px;
+  min-width: 80px;
+  font-size: 16px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-left: 8px;
+}
+
+.calc-table {
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.calc-table th, .calc-table td { padding: 6px 14px; border-bottom: 1px solid var(--border); text-align: right; }
+.calc-table th { color: var(--muted); font-weight: 600; }
+.calc-table tr.top td { background: var(--hl-bg); font-weight: 600; }
+
 /* ===== 座学 ===== */
 .learn h3 { margin: 18px 0 6px; font-size: 17px; }
 .learn p, .learn li { font-size: 15px; }
@@ -476,6 +567,7 @@ a { color: var(--accent-text); }
 
 @media (max-width: 560px) {
   input[type="number"] { width: 84px; }
+  .pair-name { flex-basis: 100%; }
   .tabs { display: grid; grid-template-columns: 1fr 1fr; border-bottom: none; gap: 6px; }
   .tab-button { border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 0; }
   .tab-button.active { border: 1px solid var(--accent); border-top-width: 3px; }

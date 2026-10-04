@@ -102,7 +102,8 @@ function tune() {
 // 評価用の英文での正答率を js/accuracy.js の形にする（画面で「英字が少ないと外れやすい」と知らせるのに使う）
 export function renderAccuracy() {
   const corpus = readCorpus('eval-pg98.txt');
-  const rate = (rows) => rows.map((r) => `[${r.len}, ${(100 * r.correct / r.trials).toFixed(1)}]`).join(', ');
+  const pct = (n, total) => (100 * n / total).toFixed(1);
+  const rate = (rows) => rows.map((r) => `[${r.len}, ${pct(r.correct, r.trials)}]`).join(', ');
   return [
     '// 生成物（tools/evaluate.mjs write が tools/corpus/eval-pg98.txt から作る。手で編集しない）',
     `// 総当たりの1位が正解になった割合（%）。[英字の数, 割合]。各${TRIALS}回、乱数の種 ${SEED}`,
@@ -110,7 +111,9 @@ export function renderAccuracy() {
     "  source: 'Project Gutenberg #98 A Tale of Two Cities (tools/corpus/eval-pg98.txt)',",
     `  trials: ${TRIALS},`,
     `  spaces: [${rate(evaluate(corpus, { spaces: true }))}],`,
-    `  noSpaces: [${rate(evaluate(corpus, { spaces: false }))}]`,
+    `  noSpaces: [${rate(evaluate(corpus, { spaces: false }))}],`,
+    '  // 多い文字を E・T と仮定する手順: [英字の数, 1つ目の仮定が正解の割合, 30通りのどれかに正解がある割合]',
+    `  frequency: [${evaluateFrequency(corpus).map((r) => `[${r.len}, ${pct(r.first, r.trials)}, ${pct(r.within, r.trials)}]`).join(', ')}]`,
     '};',
     ''
   ].join(String.fromCharCode(10));
