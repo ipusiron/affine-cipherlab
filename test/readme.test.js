@@ -15,19 +15,24 @@ const DOCS = {
     file: 'README.md', switcher: '[English](README.en.md) · 日本語', day: '**Day049 - 生成AIで作るセキュリティツール100**',
     images: /^assets\/screenshot\d*\.png$/,
     sec: { math: '🧮 数学的背景', examples: '📝 具体例', crack: '🔬 総当たり解読の仕組みと正答率', tree: '📁 ディレクトリー構造', about: '🛠️ このツールについて',
-      solve: '✍️ 手で解く（既知平文と頻度による仮定）' },
-    heads: { examples: '平文', accuracy: '英字の数' },
+      solve: '✍️ 手で解く（既知の組・クリブ・頻度による仮定）', quiz: '🎓 練習問題' },
+    heads: { examples: '平文', accuracy: '英字の数', crib: '英字の数（空白なし）' },
     claims: ['99.3%', '56.2%', '約16万字', '275語', '×4', '差が3未満'],
-    solveClaims: ['差11の逆元19', 'a ≡ 3 × 19 ≡ 5', 'b ≡ 2 − 5 × 4 ≡ 8', '12個のaがどれも鍵', '上位6文字から30通り']
+    solveClaims: ['差11の逆元19', 'a ≡ 3 × 19 ≡ 5', 'b ≡ 2 − 5 × 4 ≡ 8', '12個のaがどれも鍵', '上位6文字から30通り', 'C→Hを足す', 'a=3、b=1に決まる',
+      'THATは200字でも{THAT200}しか', '組は6つまで'],
+    quizClaims: ['問題番号1の問5は`{cipher}`（a={a}、b={b}、平文は{plain}）', '例文{n}文', '1〜{max}']
   },
   en: {
     file: 'README.en.md', switcher: 'English · [日本語](README.md)', day: '**Day049 - 100 Security Tools with Generative AI**',
     images: /^assets\/en\/screenshot\d*\.png$/,
     sec: { math: '🧮 Mathematical background', examples: '📝 Examples', crack: '🔬 How the brute-force attack works and how accurate it is',
-      tree: '📁 Directory structure', about: '🛠️ About this tool', solve: '✍️ Solve by hand (known plaintext and frequency guesses)' },
-    heads: { examples: 'Plaintext', accuracy: 'Letters' },
+      tree: '📁 Directory structure', about: '🛠️ About this tool', solve: '✍️ Solve by hand (known pairs, cribs and frequency guesses)',
+      quiz: '🎓 Practice' },
+    heads: { examples: 'Plaintext', accuracy: 'Letters', crib: 'Letters (no spaces)' },
     claims: ['99.3%', '56.2%', 'about 160,000 letters', '275 words', '4 × the number', 'under 3'],
-    solveClaims: ['the inverse 19 of the difference 11', 'a ≡ 3 × 19 ≡ 5', 'b ≡ 2 − 5 × 4 ≡ 8', 'all 12 values of a', '30 guesses from the six']
+    solveClaims: ['the inverse 19 of the difference 11', 'a ≡ 3 × 19 ≡ 5', 'b ≡ 2 − 5 × 4 ≡ 8', 'all 12 values of a', '30 guesses from the six',
+      'Adding C→H', 'the key is a=3 and b=1', 'Only {THAT200} of the 200-letter texts contained THAT', 'Up to six pairs'],
+    quizClaims: ['Q5 of question number 1 is `{cipher}` (a={a}, b={b}; the plaintext is {plain})', 'from {n} English proverbs', '(1 to {max})']
   }
 };
 for (const d of Object.values(DOCS)) d.text = read(d.file);
@@ -131,11 +136,31 @@ for (const [lang, d] of Object.entries(DOCS)) {
     const rows = table(sec, d.heads.accuracy);
     assert.deepEqual(rows.map((r) => Number(r[0])), ACC.frequency.map((x) => x[0]));
     rows.forEach((r, i) => assert.deepEqual([r[1], r[2]], [`${ACC.frequency[i][1].toFixed(1)}%`, `${ACC.frequency[i][2].toFixed(1)}%`]));
-    for (const c of d.solveClaims) assert.ok(sec.includes(c), c);
+    const that200 = `${ACC.crib.THAT.find((r) => r[0] === 200)[1].toFixed(1)}%`;
+    for (const c of d.solveClaims.map((x) => x.replace('{THAT200}', that200))) assert.ok(sec.includes(c), c);
+    const cribRows = table(sec, d.heads.crib);
+    assert.deepEqual(cribRows.map((r) => Number(r[0])), ACC.crib.THE.map((x) => x[0]));
+    cribRows.forEach((r, i) => {
+      const [the, that] = [ACC.crib.THE[i], ACC.crib.THAT[i]];
+      assert.deepEqual(r.slice(1), [`${the[1].toFixed(1)}%`, the[2].toFixed(2), `${that[1].toFixed(1)}%`, that[2].toFixed(2)]);
+    });
+    // 「単語を含めば、どの長さでも英語らしさの1位が正解だった」
+    for (const row of [...ACC.crib.THE, ...ACC.crib.THAT]) assert.equal(row[3], 100);
+    assert.deepEqual(C.solveFromKnown([['A', 'B'], ['N', 'O'], ['C', 'H']]).keys, [{ a: 3, b: 1 }]);
     const one = C.solveFromPairs('E', 'C', 'T', 'Z');
     assert.deepEqual([one.dp, one.inv, one.dc, one.keys[0].a, one.keys[0].b], [11, 19, 3, 5, 8]);
     assert.equal(C.solveFromPairs('A', 'B', 'N', 'O').keys.length, 12);
     assert.equal(C.HYPOTHESIS_LETTERS * (C.HYPOTHESIS_LETTERS - 1), 30);
+  });
+
+  test(`${d.file}: 練習問題の節の例は、問題番号1の実際の問題と一致する`, () => {
+    const sec = section(d.text, d.sec.quiz);
+    const q = C.makeQuiz(1)[4];
+    const vars = { cipher: q.cipher, a: q.answer.a, b: q.answer.b, plain: q.plain, n: C.PROVERBS.length, max: C.QUIZ_MAX_SEED };
+    for (const c of d.quizClaims) {
+      const text = Object.entries(vars).reduce((x, [k, v]) => x.split(`{${k}}`).join(String(v)), c);
+      assert.ok(sec.includes(text), text);
+    }
   });
 
   test(`${d.file}: ディレクトリー構造にすべてのファイルとディレクトリーが載り、全行に説明がある`, () => {
@@ -176,7 +201,7 @@ test('画像: 参照はすべて実在し、日本語版は assets/、英語版�
   const refs = {};
   for (const [lang, d] of Object.entries(DOCS)) {
     refs[lang] = [...d.text.matchAll(/!\[[^\]]*\]\((assets\/[^)]+)\)/g)].map((m) => m[1]);
-    assert.equal(refs[lang].length, 6, lang);
+    assert.equal(refs[lang].length, 8, lang);
     for (const r of refs[lang]) {
       assert.ok(fs.existsSync(path.join(ROOT, r)), r);
       assert.match(r, d.images, r);
