@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { core } from './load.js';
-import { readCorpus } from '../tools/evaluate.mjs';
+import { readCorpus, xorshift32 } from '../tools/evaluate.mjs';
 
 const C = core();
 const keysOf = (r) => r.keys.map((k) => [k.a, k.b]);
@@ -48,6 +48,57 @@ test('頻度による仮定は多い順の上位6文字から30通り、（1位,
   }
   const best = hs.flatMap((h) => h.keys).reduce((p, q) => (q.score > p.score ? q : p));
   assert.deepEqual([best.a, best.b], [11, 7]);
+});
+
+// 312 通りの鍵のうち、すべての組（平文字 → 暗号文字）を満たすもの
+const KEYS = C.VALID_A.flatMap((a) => Array.from({ length: 26 }, (_, b) => [a, b]));
+const naive = (pairs) => KEYS.filter(([a, b]) => pairs.every(([p, c]) => C.mod(a * C.letterIndex(p) + b, 26) === C.letterIndex(c)));
+
+test('組が2つなら、solveFromKnown は solveFromPairs と同じ鍵・同じ理由になる（決まった種で2,000通り）', () => {
+  const rnd = xorshift32(20261005);
+  const L = () => String.fromCharCode(65 + Math.floor(rnd() * 26));
+  for (let i = 0; i < 2000; i++) {
+    const [p1, c1, p2, c2] = [L(), L(), L(), L()];
+    const two = C.solveFromPairs(p1, c1, p2, c2);
+    const known = C.solveFromKnown([[p1, c1], [p2, c2]]);
+    assert.deepEqual([keysOf(known), known.reason], [keysOf(two), two.reason], `${p1}${c1}${p2}${c2}`);
+  }
+});
+
+test('組が3つ以上でも、残る鍵は312通りの鍵をすべて試した結果と一致する（決まった種で3,000通り、正しい組も混ぜる）', () => {
+  const rnd = xorshift32(20261006);
+  const int = (n) => Math.floor(rnd() * n);
+  const L = (i) => String.fromCharCode(65 + i);
+  for (let i = 0; i < 3000; i++) {
+    const [a, b] = KEYS[int(KEYS.length)];
+    const pairs = Array.from({ length: 3 + int(4) }, () => {
+      const p = int(26);
+      return [L(p), L(rnd() < 0.8 ? C.mod(a * p + b, 26) : int(26))];
+    });
+    const r = C.solveFromKnown(pairs);
+    if (r.reason === 'samePair') continue;
+    assert.deepEqual(keysOf(r), r.reason === 'contradiction' ? [] : naive(pairs), JSON.stringify(pairs));
+    if (r.reason !== 'contradiction') assert.equal(r.ok, naive(pairs).length > 0);
+  }
+});
+
+test('差が13の2組では12個残る鍵が、3つ目の組で1つに決まる。どれも満たさない組なら鍵は残らない', () => {
+  const r = C.solveFromKnown([['A', 'B'], ['N', 'O'], ['C', 'H']]);
+  assert.deepEqual([keysOf(r), r.reason, r.basePairs], [[[3, 1]], null, [0, 1]]);
+  assert.deepEqual(r.checks.map((c) => [c.pair, c.p, c.c, c.before, c.kept.length, c.removed.length]), [[2, 2, 7, 12, 1, 11]]);
+  assert.ok(r.checks[0].removed.every((k) => k.got === C.mod(k.a * 2 + k.b, 26) && k.got !== 7));
+  const none = C.solveFromKnown([['A', 'B'], ['N', 'O'], ['C', 'A'], ['D', 'E']]);
+  assert.deepEqual([none.ok, none.reason, none.keys], [false, 'eliminated', []]);
+  assert.deepEqual(none.checks.map((c) => [c.pair, c.kept.length]), [[2, 0]], '鍵が残らなくなったら、そこで止める');
+});
+
+test('同じ組の重複は1つとみなし、同じ平文字に別の暗号文字は矛盾（どの組か返す）。英字でない欄も組の番号を返す', () => {
+  const dup = C.solveFromKnown([['E', 'C'], ['E', 'C'], ['T', 'Z'], ['T', 'Z']]);
+  assert.deepEqual([keysOf(dup), dup.basePairs, dup.checks], [[[5, 8]], [0, 2], []]);
+  const bad = C.solveFromKnown([['E', 'C'], ['T', 'Z'], ['E', 'D']]);
+  assert.deepEqual([bad.reason, bad.conflict], ['contradiction', [0, 2]]);
+  assert.deepEqual([C.solveFromKnown([['E', 'C'], ['T', '']]).reason, C.solveFromKnown([['E', 'C'], ['T', '']]).pair], ['notLetter', 1]);
+  assert.equal(C.solveFromKnown([['E', 'C'], ['E', 'C'], ['E', 'C']]).reason, 'samePair');
 });
 
 test('URL の #text= を先に読み、なければ ?text=。読み込んだ text は「?」と「#」から消す', () => {

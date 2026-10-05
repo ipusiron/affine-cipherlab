@@ -12,13 +12,14 @@ English · [日本語](README.md)
 
 Affine CipherLab is a web tool for learning and trying the affine cipher, a classical cipher. Besides encryption and decryption, it lets you follow the letter mapping in a table and try a brute-force attack over all 312 keys. The brute-force score combines how English adjacent letter pairs look with matches of common English words, and the README lists how often the first candidate is correct for each text length.
 
-The tool has five tabs.
+The tool has six tabs.
 
 1. Encrypt: encrypts the plaintext and highlights the letters used in the mapping table
 2. Decrypt: turns the ciphertext back with the inverse
 3. Brute force: tries all 312 keys and ranks the candidates by how English they look
-4. Solve by hand: shows the steps to solve the key from two known letters, and guesses of E and T from the most frequent letters
+4. Solve by hand: shows the steps to solve the key from known pairs (narrowing it down from the third pair on), trying a known word (crib), and guesses of E and T from the most frequent letters
 5. Learn: explains the formulas, finding the inverse (with a calculator), special cases and how the brute-force attack works
+6. Practice: gives the same five questions for each question number and shows worked explanations when you check the answers
 
 ---
 
@@ -48,13 +49,21 @@ Try it directly in your browser.
 >
 >*A 12-letter ciphertext; the tool says the first two candidates are close and the text is short (dark)*
 
->![Find the key from two known letters](assets/en/screenshot5.png)
+>![Find the key from known pairs](assets/en/screenshot5.png)
 >
->*The key a=5, b=8 solved from two known pairs (E→C, T→Z) by subtraction and the inverse*
+>*Two pairs with difference 13 (A→B, N→O) leave 12 keys, and a third pair (C→H) settles a=3, b=1*
 
 >![Guess E and T from the most frequent letters](assets/en/screenshot6.png)
 >
 >*30 guesses of E and T for a 900-letter ciphertext; the key from step 21 has the highest English score*
+
+>![Try a known word (crib)](assets/en/screenshot7.png)
+>
+>*THE placed on the same ciphertext (720 letters) narrows the 312 keys to 8; the first, a=11, b=7, fits at 7 positions*
+
+>![Practice](assets/en/screenshot8.png)
+>
+>*Checking the answers for question number 1, with whether each is correct and a worked explanation (dark)*
 
 ---
 
@@ -86,14 +95,20 @@ Try it directly in your browser.
 
 ### ✍️ Solve by hand
 
-- Solves the key from two known letters (two plaintext→ciphertext pairs), showing the steps: subtracting the equations, the inverse (or candidates from the gcd), then b
-- Explains why when there are several keys (difference 13), no solution, an a that is not a key, or contradictory pairs
+- Solves the key from 2 to 6 known pairs (plaintext→ciphertext letters). The first two pairs show the steps: subtracting the equations, the inverse (or candidates from the gcd), then b; pairs from the third on check the remaining keys and narrow them down
+- Explains why when several keys remain (difference 13), there is no solution, an a is not a key, pairs contradict each other, or no key satisfies a pair
+- Places a known word (crib) at each position of the ciphertext and keeps only the consistent keys. It shows how the positions were judged, and "Solve with these pairs" puts the pairs at that position into the fields above to show the steps
 - Lists 30 guesses of E and T from the most frequent ciphertext letters and highlights the key with the highest English score
 
 ### 📚 Learn
 
 - The definition, why a must be coprime to 26, finding the inverse (a=5), special cases (Caesar, ROT13, multiplicative cipher, Atbash), how the brute-force attack works, and related tools
 - Inverse calculator: choose a to see the rows of the extended Euclidean algorithm (remainder, quotient, coefficients) and a⁻¹, or that there is no inverse when a is not coprime to 26
+
+### 🎓 Practice
+
+- Gives the same five questions for each question number (inverse, encrypting one letter, decrypting one letter, the key from two known pairs, the key from a short ciphertext). Sharing the number lets everyone in a class solve the same questions
+- Checking the answers shows whether each is correct, with a worked explanation
 
 ### 🌐 Interface
 
@@ -110,8 +125,9 @@ Try it directly in your browser.
 2. Enter the plaintext, press Encrypt and check the letter mapping in the table
 3. On the Decrypt tab, press "Use the ciphertext and key from the Encrypt tab", then Decrypt to see it turn back
 4. Paste a ciphertext on the Brute force tab and press Analyze to see the candidates. "Show in table" puts a candidate's key in
-5. On the Solve by hand tab, solve the key from two known letters. For a longer ciphertext, look for the key in the table of E and T guesses
+5. On the Solve by hand tab, solve the key from known pairs. Without pairs, try a word likely to be in the plaintext (such as THE), or look for the key in the table of E and T guesses
 6. Use the calculator on the Learn tab to see how the inverse is found
+7. Solve the questions on the Practice tab and check the steps when you check the answers
 
 ---
 
@@ -232,7 +248,7 @@ The table below shows how often the first candidate turned back into the origina
 
 ---
 
-## ✍️ Solve by hand (known plaintext and frequency guesses)
+## ✍️ Solve by hand (known pairs, cribs and frequency guesses)
 
 ### Find the key from two known letters
 
@@ -242,6 +258,36 @@ With two pairs of plaintext and ciphertext letters (p1→c1, p2→c2), subtract 
 - If the difference is even (gcd 2), there are two candidates for a, and only the one coprime to 26 is a key
 - If the difference is 13, there are 13 candidates for a. For A→B and N→O, all 12 values of a coprime to 26 are keys, so these two pairs are not enough
 - Pairs where the same plaintext letter becomes two different ciphertext letters, or where no candidate for a is coprime to 26, cannot happen with an affine cipher
+
+### Narrow down with a third pair or more
+
+When two pairs do not settle the key (difference 13), or to check that the pairs are right, add pairs from the third on. Of the keys solved from the first two pairs, only those satisfying a·p + b ≡ c (mod 26) remain.
+
+- A→B and N→O leave 12 keys (all with b=1). Adding C→H leaves only the key with 2a + 1 ≡ 7, so the key is a=3 and b=1
+- If no key satisfies some pair, it cannot happen with an affine cipher (the input is wrong, or it is a different cipher)
+- Up to six pairs can be entered. A repeated pair counts once
+
+### Try a known word (crib)
+
+If you know a word likely to be in the plaintext (a crib), you can narrow down the key while looking for where it is in the ciphertext. The tool places the word at each position of the ciphertext letters and checks the following in order.
+
+1. Letter pattern: the affine cipher replaces letters one-to-one, so positions with the same letter in the word have the same letter in the ciphertext, and positions with different letters have different letters (for THAT, the first and fourth letters are the same)
+2. Solve the key as above from two pairs: the first letter of the word and the first letter that differs from it
+3. Check the remaining letters with that key
+
+Only keys from positions where all letters fit remain, ranked by the English score of the decrypted text. The table shows the results of trying THE and THAT on the evaluation text encrypted without spaces (300 trials each). The number of keys left is the average when the plaintext contains the word.
+
+| Letters (no spaces) | Contains THE | Keys left by THE | Contains THAT | Keys left by THAT |
+|---|---|---|---|---|
+| 50 | 66.3% | 1.71 | 17.3% | 1.04 |
+| 100 | 86.7% | 2.51 | 31.7% | 1.13 |
+| 200 | 98.3% | 3.78 | 43.7% | 1.28 |
+| 500 | 100.0% | 7.25 | 80.7% | 1.60 |
+
+- When the plaintext contains the word, the 312 keys narrow down to a few, and the first by English score was correct at every length
+- When the plaintext does not contain the word, the correct key does not remain. Only 43.7% of the 200-letter texts contained THAT
+- The longer the ciphertext, the more positions fit by chance and the more keys remain. A word with a repeated letter (THAT) adds a letter-pattern condition, so it narrows down to almost one key
+- `node tools/evaluate.mjs crib` reproduces the table
 
 ### Guess E and T from the most frequent letters
 
@@ -263,6 +309,25 @@ The table shows, for the evaluation text (A Tale of Two Cities) encrypted with k
 
 ---
 
+## 🎓 Practice
+
+The Practice tab gives the same five questions for each question number (1 to 999999). The questions are made with a random generator determined by the number, so the same number gives the same questions in any browser. A new number is chosen each time the page is opened, and "Load this number" loads a number you enter.
+
+| Q | Content | Answer |
+|---|---|---|
+| 1 | The inverse a⁻¹ of a | An integer from 0 to 25 |
+| 2 | Encrypting one letter | One letter |
+| 3 | Decrypting one letter | One letter |
+| 4 | The key from two known pairs (their difference is coprime to 26, so the key is unique) | a and b |
+| 5 | The key from a short ciphertext | a and b |
+
+- Checking the answers shows whether each is correct, with a worked explanation. You may use the other tabs to calculate
+- a=1 and a=25 are not used, because they give no practice in calculating by hand
+- The ciphertext of Q5 is chosen from 26 English proverbs and sample sentences. Tests confirm that each one comes back as the first brute-force candidate, with a gap of 3 or more to the second
+- Example: Q5 of question number 1 is `QB QVLT NT RBBK QVLT` (a=11, b=3; the plaintext is NO NEWS IS GOOD NEWS)
+
+---
+
 ## 📨 Passing a ciphertext in the URL
 
 Opening the tool with a ciphertext in `#text=` (or `?text=`) opens it on the Brute force tab, already analyzed. The part after `#` is not sent to the server, so the ciphertext does not reach GitHub Pages.
@@ -276,8 +341,8 @@ Opening the tool with a ciphertext in `#text=` (or `?text=`) opens it on the Bru
 
 ## 🎯 Use cases
 
-- Classes and study groups: show what coprime means, the inverse, and a mapping that is not one-to-one, in a visible table
-- Puzzles: run a ciphertext that looks like an affine cipher through the brute-force attack and compare the candidates
+- Classes and study groups: show what coprime means, the inverse, and a mapping that is not one-to-one, in a visible table. Sharing a question number on the Practice tab lets everyone solve the same questions
+- Puzzles: run a ciphertext that looks like an affine cipher through the brute-force attack and compare the candidates. If you know a word likely to be in the plaintext, narrow down the key with a crib
 - CTF practice: confirm that a classical cipher problem has only 312 possible keys
 - Learning to program: read the extended Euclidean algorithm, table-based conversion, language-model scoring and seeded evaluation in a small codebase
 - Making teaching material: cite the examples and accuracy table as values checked against the implementation by tests
@@ -313,9 +378,9 @@ npm test
 
 - Runs on the standard Node.js 22+ test runner (`node:test`) with no dependencies. GitHub Actions runs it on every push and pull request
 - Known answers were computed in Python (`pow(a, -1, 26)`, a separately written encryption, the extended Euclidean algorithm)
-- Encryption, decryption, inverses, key input checks, the mapping table, the cases of solving from two known letters (compared with keys collected by brute force in Python), the order of frequency guesses, URL input, brute-force ranking and the "hard to tell apart" check, that the scoring table matches its generator output, and that the text excerpts are unchanged
+- Encryption, decryption, inverses, key input checks, the mapping table, the cases of solving from two known letters (compared with keys collected by brute force in Python), narrowing down with a third pair and cribs (compared with trying all 312 keys), the practice questions (answers checked by separate calculations, and the sentences coming back by brute force), the order of frequency guesses, URL input, brute-force ranking and the "hard to tell apart" check, that the scoring table matches its generator output, and that the text excerpts are unchanged
 - index.html CSP, ARIA and labels, the Japanese and English dictionaries, color contrast (4.5:1 or more in light and dark), and line length
-- The examples, inverse table, accuracy tables (brute force and frequency guesses) and directory tree in both READMEs are also checked against the implementation
+- The examples, inverse table, accuracy tables (brute force, frequency guesses and cribs), the practice example and directory tree in both READMEs are also checked against the implementation
 
 ---
 
@@ -332,19 +397,23 @@ affine-cipherlab/
 │   │   ├── screenshot2.png       # A key that is not one-to-one
 │   │   ├── screenshot3.png       # Brute-force attack
 │   │   ├── screenshot4.png       # A short ciphertext that is hard to tell apart
-│   │   ├── screenshot5.png       # Find the key from two known letters
-│   │   └── screenshot6.png       # Guess E and T from the most frequent letters
+│   │   ├── screenshot5.png       # Narrow down the key with a third pair
+│   │   ├── screenshot6.png       # Guess E and T from the most frequent letters
+│   │   ├── screenshot7.png       # Try a known word (crib)
+│   │   └── screenshot8.png       # Checking the practice answers
 │   ├── screenshot.png            # Screenshot for the Japanese README (encryption)
 │   ├── screenshot2.png           # Screenshot for the Japanese README (not one-to-one)
 │   ├── screenshot3.png           # Screenshot for the Japanese README (brute force)
 │   ├── screenshot4.png           # Screenshot for the Japanese README (short ciphertext)
-│   ├── screenshot5.png           # Screenshot for the Japanese README (two known letters)
-│   └── screenshot6.png           # Screenshot for the Japanese README (E and T guesses)
+│   ├── screenshot5.png           # Screenshot for the Japanese README (third pair)
+│   ├── screenshot6.png           # Screenshot for the Japanese README (E and T guesses)
+│   ├── screenshot7.png           # Screenshot for the Japanese README (crib)
+│   └── screenshot8.png           # Screenshot for the Japanese README (practice)
 ├── css/                          # Styles
 │   └── style.css                 # Page styles (light and dark colors)
 ├── js/                           # Page scripts (plain scripts that work from file://)
-│   ├── accuracy.js               # Accuracy by length and of frequency guesses (generated by tools/evaluate.mjs)
-│   ├── affine-core.js            # Core (encryption, decryption, inverse, brute force, solving by hand)
+│   ├── accuracy.js               # Accuracy of brute force, frequency guesses and cribs (generated by tools/evaluate.mjs)
+│   ├── affine-core.js            # Core (encryption, decryption, inverse, brute force, solving by hand, practice)
 │   ├── english-data.js           # Adjacent letter pair table (generated by tools/build-english.mjs)
 │   ├── i18n.js                   # Language choice and static text
 │   ├── messages.js               # Japanese and English strings
@@ -355,19 +424,21 @@ affine-cipherlab/
 │   ├── contrast.test.js          # Color contrast
 │   ├── core.test.js              # Encryption, decryption, inverse, input checks (known answers)
 │   ├── crack.test.js             # Brute force, scoring table, text excerpts
+│   ├── crib.test.js              # Trying a known word (crib)
 │   ├── format.test.js            # Line length and line endings
 │   ├── html.test.js              # CSP, ARIA, labels, match with the dictionary
 │   ├── i18n.test.js              # Language choice
 │   ├── load.js                   # Loads the plain scripts into tests
 │   ├── messages.test.js          # Japanese and English dictionaries
+│   ├── quiz.test.js              # Practice questions (numbers, answers, sentences)
 │   ├── readme.test.js            # README tables, tree and images
-│   └── solve.test.js             # Solving from two known pairs, frequency guesses, URL input
+│   └── solve.test.js             # Solving from known pairs (including a third or more), frequency guesses, URL input
 ├── tools/                        # Development scripts (not used by the page)
 │   ├── corpus/                   # English excerpts (Project Gutenberg)
 │   │   ├── eval-pg98.txt         # Evaluation: A Tale of Two Cities (#98)
 │   │   └── train-pg1342.txt      # Training: Pride and Prejudice (#1342)
 │   ├── build-english.mjs         # Builds the adjacent letter pair table
-│   ├── evaluate.mjs              # Measures accuracy, chooses weights, writes accuracy.js
+│   ├── evaluate.mjs              # Measures accuracy (brute force, frequency, cribs), chooses weights, writes accuracy.js
 │   ├── load-core.mjs             # Loads the core into development scripts
 │   └── make-corpus.mjs           # Makes excerpts from Gutenberg texts
 ├── .gitignore                    # Files Git ignores

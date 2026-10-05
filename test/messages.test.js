@@ -30,6 +30,10 @@ test('画面のスクリプトが使うキーは、すべて辞書にある（�
   for (const m of src.matchAll(/\bt\('([a-z]+\.[A-Za-z.]+)'/g)) assert.ok(MESSAGES.ja[m[1]] !== undefined, m[1]);
   for (const e of ['empty', 'notInteger', 'aRange', 'bRange']) assert.ok(MESSAGES.ja[`err.${e}`], e);
   for (const c of ['rank', 'a', 'b', 'score', 'words', 'text', 'action']) assert.ok(MESSAGES.ja[`crack.col.${c}`], c);
+  for (const c of ['rank', 'key', 'positions', 'score', 'text', 'action']) assert.ok(MESSAGES.ja[`crib.col.${c}`], c);
+  for (const e of ['cribShort', 'cribSame', 'cribLong']) assert.ok(MESSAGES.ja[`crib.err.${e}`], e);
+  for (const q of ['inverse', 'encrypt', 'decrypt', 'pairs', 'text']) assert.ok(MESSAGES.ja[`quiz.title.${q}`], q);
+  for (let n = 1; n <= 6; n++) assert.ok(MESSAGES.ja[`solve.pair${n}`], n);
 });
 
 test('t は置き場所を値で埋め、未知のキーはキーのまま返す', () => {

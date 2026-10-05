@@ -38,6 +38,8 @@
       data-i18n="tab.solve">手で解く</button>
     <button type="button" class="tab-button" role="tab" id="tab-learn" data-tab="learn" aria-controls="learn" aria-selected="false" tabindex="-1"
       data-i18n="tab.learn">座学</button>
+    <button type="button" class="tab-button" role="tab" id="tab-quiz" data-tab="quiz" aria-controls="quiz" aria-selected="false" tabindex="-1"
+      data-i18n="tab.quiz">練習</button>
   </nav>
 
   <main>
@@ -131,10 +133,10 @@
     <!--手で解く-->
     <section id="solve" class="tab-content" role="tabpanel" aria-labelledby="tab-solve" hidden>
       <h2 data-i18n="solve.heading">手で解く（Solve）</h2>
-      <h3 data-i18n="solve.pairsHeading">既知の2文字から鍵を解く</h3>
-      <p class="hint" data-i18n="solve.pairsLead">平文の文字と暗号文の文字の組が2つ分かれば、2つの式を連立してa・bを求められます。</p>
-      <div class="pairs">
-        <div class="pair">
+      <h3 id="pairs-heading" data-i18n="solve.pairsHeading">既知の組から鍵を解く</h3>
+      <p class="hint" data-i18n="solve.pairsLead">平文の文字と暗号文の文字の組が2つ分かれば、2つの式を連立してa・bを求められます。3つ目からの組は、残った鍵を確かめて絞り込むのに使います。</p>
+      <div class="pairs" id="pairs">
+        <div class="pair" data-pair="1">
           <span class="pair-name" data-i18n="solve.pair1">組1</span>
           <label for="p1" data-i18n="solve.plain">平文字</label>
           <input type="text" id="p1" class="letter-input" maxlength="1" value="E" autocomplete="off" spellcheck="false">
@@ -142,7 +144,7 @@
           <label for="c1" data-i18n="solve.cipher">暗号文字</label>
           <input type="text" id="c1" class="letter-input" maxlength="1" value="C" autocomplete="off" spellcheck="false">
         </div>
-        <div class="pair">
+        <div class="pair" data-pair="2">
           <span class="pair-name" data-i18n="solve.pair2">組2</span>
           <label for="p2" data-i18n="solve.plain">平文字</label>
           <input type="text" id="p2" class="letter-input" maxlength="1" value="T" autocomplete="off" spellcheck="false">
@@ -151,17 +153,34 @@
           <input type="text" id="c2" class="letter-input" maxlength="1" value="Z" autocomplete="off" spellcheck="false">
         </div>
       </div>
+      <div class="pair-actions">
+        <button type="button" id="add-pair" class="small-btn" data-i18n="btn.addPair">＋組を足す</button>
+        <button type="button" id="remove-pair" class="small-btn" data-i18n="btn.removePair">－最後の組を消す</button>
+      </div>
       <button type="button" id="solve-btn" class="primary" data-i18n="btn.solve">解く</button>
       <div id="solve-result" class="output solve-result" role="status" aria-live="polite" hidden></div>
 
-      <h3 data-i18n="solve.freqHeading">多い文字をE・Tと仮定して解く</h3>
-      <p class="hint" data-i18n="solve.freqLead">英文ではEとTがとくに多いので、暗号文で多い文字をE・Tと仮定すれば、上と同じ方法で鍵を解けます。多い順の上位6文字から30通りを試します。</p>
+      <h3 data-i18n="solve.textHeading">暗号文から手がかりを探す</h3>
+      <p class="hint" data-i18n="solve.textLead">既知の組がないときは、暗号文から組を見つけます。下の2つの方法は、この欄の暗号文を使います。</p>
       <div class="input-header">
-        <label for="freq-input" class="field-label" data-i18n="dec.input">暗号文</label>
-        <button type="button" class="copy-btn sync-btn" id="freq-from-crack" data-i18n="btn.fromCrack">🔄 総当たりタブの暗号文を入れる</button>
+        <label for="solve-input" class="field-label" data-i18n="dec.input">暗号文</label>
+        <button type="button" class="copy-btn sync-btn" id="solve-from-crack" data-i18n="btn.fromCrack">🔄 総当たりタブの暗号文を入れる</button>
       </div>
-      <textarea id="freq-input" rows="4" spellcheck="false" data-i18n-attr="placeholder:dec.placeholder" placeholder="暗号文を入力してください"></textarea>
+      <textarea id="solve-input" rows="4" spellcheck="false" data-i18n-attr="placeholder:dec.placeholder" placeholder="暗号文を入力してください"></textarea>
       <div class="alert alert-input" id="input-alert-solve" role="status" aria-live="polite" hidden></div>
+
+      <h4 data-i18n="solve.cribHeading">既知の単語（クリブ）を当てる</h4>
+      <p class="hint" data-i18n="solve.cribLead">平文に入っていそうな単語（たとえばTHE）を、暗号文の英字の並びの各位置に当てます。文字の並びがそろう位置で、最初の2組から鍵を解き、残りの文字で確かめます。英字以外の文字は無視します。</p>
+      <div class="crib-row">
+        <label for="crib-word" class="field-label" data-i18n="solve.cribWord">単語</label>
+        <input type="text" id="crib-word" class="word-input" value="THE" maxlength="40" autocomplete="off" spellcheck="false">
+        <button type="button" id="crib-btn" class="primary" data-i18n="btn.crib">当てる</button>
+      </div>
+      <div id="crib-status" class="crack-status" role="status" aria-live="polite"></div>
+      <div id="crib-results" class="table-wrap"></div>
+
+      <h4 data-i18n="solve.freqHeading">多い文字をE・Tと仮定して解く</h4>
+      <p class="hint" data-i18n="solve.freqLead">英文ではEとTがとくに多いので、暗号文で多い文字をE・Tと仮定すれば、上と同じ方法で鍵を解けます。多い順の上位6文字から30通りを試します。</p>
       <button type="button" id="freq-btn" class="primary" data-i18n="btn.freq">仮定を並べる</button>
       <div id="freq-status" class="crack-status" role="status" aria-live="polite"></div>
       <div id="freq-results" class="table-wrap"></div>
@@ -253,6 +272,22 @@
         <select id="calc-a"></select>
         <div id="calc-result" class="table-wrap" aria-live="polite"></div>
       </div>
+    </section>
+
+    <!--練習-->
+    <section id="quiz" class="tab-content" role="tabpanel" aria-labelledby="tab-quiz" hidden>
+      <h2 data-i18n="quiz.heading">練習問題（Practice）</h2>
+      <p class="hint" data-i18n="quiz.lead">問題番号ごとに同じ5問が出ます。授業などで同じ問題を解くときは、番号を伝えてください。計算には、ほかのタブを使ってかまいません。</p>
+      <div class="quiz-seed">
+        <label for="quiz-seed" class="field-label" data-i18n="quiz.seed">問題番号</label>
+        <input type="number" id="quiz-seed" min="1" max="999999" step="1" inputmode="numeric">
+        <button type="button" id="quiz-load" class="small-btn" data-i18n="btn.quizLoad">この番号で出題</button>
+        <button type="button" id="quiz-new" class="small-btn" data-i18n="btn.quizNew">🎲 新しい問題</button>
+      </div>
+      <div class="alert" id="quiz-alert" role="status" aria-live="polite" hidden></div>
+      <ol id="quiz-list" class="quiz-list"></ol>
+      <button type="button" id="quiz-check" class="primary" data-i18n="btn.quizCheck">答え合わせ</button>
+      <div id="quiz-score" class="crack-status" role="status" aria-live="polite"></div>
     </section>
   </main>
 

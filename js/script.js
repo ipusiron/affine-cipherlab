@@ -10,7 +10,7 @@
   const fmt = (n) => Number(n).toLocaleString('en-US');
   const TOP = 20;
   const SECTIONS = ['encrypt', 'decrypt'];
-  const state = { crack: null, crackText: '', toastTimer: null, pairs: null, freq: null, freqText: '' };
+  const state = { crack: null, crackText: '', toastTimer: null, pairs: null, freq: null, freqText: '', crib: null, cribText: '', quiz: null };
   const FREQUENCY_ANALYZER = 'https://ipusiron.github.io/frequency-analyzer/';
   const FREQUENCY_MAX = 5000;
 
@@ -320,13 +320,83 @@
     if (text.length > FREQUENCY_MAX) box.append(el('span', 'hint', ` ${t('crack.freqTooLong')}`));
   }
 
-  // ===== 手で解く: 既知の2文字から鍵を解く =====
+  // ===== 手で解く: 既知の組から鍵を解く（2組で解き、3組目からで絞り込む） =====
   const letterLabel = (i) => `${letterName(i)}(${i})`;
+  const MIN_PAIRS = 2;
+  const MAX_PAIRS = 6;
+  const pairRows = () => [...document.querySelectorAll('#pairs .pair')];
+
+  function letterField(id, labelKey, value) {
+    const label = el('label', '', t(labelKey));
+    label.htmlFor = id;
+    label.dataset.i18n = labelKey;
+    const input = el('input', 'letter-input');
+    input.type = 'text';
+    input.id = id;
+    input.maxLength = 1;
+    input.value = value;
+    input.autocomplete = 'off';
+    input.spellcheck = false;
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') solvePairs();
+    });
+    return [label, input];
+  }
+
+  // 組の行は HTML に2つあり、3つ目から6つ目までを足せる（文言は data-i18n で言語の切り替えに追従する）
+  function addPairRow() {
+    const n = pairRows().length + 1;
+    if (n > MAX_PAIRS) return;
+    const row = el('div', 'pair');
+    row.dataset.pair = String(n);
+    const name = el('span', 'pair-name', t(`solve.pair${n}`));
+    name.dataset.i18n = `solve.pair${n}`;
+    const arrow = el('span', '', '→');
+    arrow.setAttribute('aria-hidden', 'true');
+    row.append(name, ...letterField(`p${n}`, 'solve.plain', ''), arrow, ...letterField(`c${n}`, 'solve.cipher', ''));
+    $('pairs').append(row);
+    updatePairButtons();
+  }
+
+  function removePairRow() {
+    const rows = pairRows();
+    if (rows.length <= MIN_PAIRS) return;
+    rows[rows.length - 1].remove();
+    updatePairButtons();
+  }
+
+  function updatePairButtons() {
+    const n = pairRows().length;
+    $('add-pair').disabled = n >= MAX_PAIRS;
+    $('remove-pair').disabled = n <= MIN_PAIRS;
+  }
+
+  // 組の数を pairs に合わせて値を入れる（クリブの位置から入れるとき）
+  function setPairs(pairs) {
+    while (pairRows().length > Math.max(MIN_PAIRS, pairs.length)) removePairRow();
+    while (pairRows().length < pairs.length) addPairRow();
+    pairRows().forEach((_, i) => {
+      const [p, c] = pairs[i] || ['', ''];
+      $(`p${i + 1}`).value = p;
+      $(`c${i + 1}`).value = c;
+    });
+  }
 
   function solvePairs() {
-    const values = ['p1', 'c1', 'p2', 'c2'].map((id) => $(id).value);
-    state.pairs = C.solveFromPairs(...values);
+    state.pairs = C.solveFromKnown(pairRows().map((_, i) => [$(`p${i + 1}`).value, $(`c${i + 1}`).value]));
     renderPairs();
+  }
+
+  const keyText = (k) => `a=${k.a}, b=${k.b}`;
+
+  function keyButton(k, label) {
+    const btn = el('button', 'small-btn', label);
+    btn.type = 'button';
+    btn.addEventListener('click', () => {
+      setKeys(k.a, k.b);
+      toast(t('toast.setFrom', { a: k.a, b: k.b }));
+    });
+    return btn;
   }
 
   function renderPairs() {
@@ -339,60 +409,164 @@
     }
     box.hidden = false;
     const list = (xs) => xs.join(', ');
+    const warn = (key, vars) => el('p', 'warn', t(key, vars));
     if (r.reason === 'notLetter') {
-      box.append(el('p', 'warn', t('solve.err.notLetter')));
+      box.append(warn('solve.err.notLetter', { n: r.pair + 1 }));
       return;
     }
-    const [P1, P2] = r.p;
-    const [C1, C2] = r.c;
+    if (r.reason === 'contradiction') {
+      box.append(warn('solve.err.contradiction', { i: r.conflict[0] + 1, j: r.conflict[1] + 1 }));
+      return;
+    }
+    if (r.reason === 'samePair') {
+      box.append(warn('solve.err.samePair'));
+      return;
+    }
+    const b = r.base;
+    const [P1, P2] = b.p;
+    const [C1, C2] = b.c;
     const steps = el('ol', 'steps');
     const step = (text) => steps.append(el('li', '', text));
-    step(t('solve.stepEq', { c1: letterLabel(C1), p1: letterLabel(P1), c2: letterLabel(C2), p2: letterLabel(P2) }));
-    if (r.reason === 'samePair' || r.reason === 'contradiction') {
-      box.append(steps, el('p', 'warn', t(`solve.err.${r.reason}`)));
+    const [i, j] = r.basePairs.map((x) => x + 1);
+    step(t('solve.stepEq', { i, j, c1: letterLabel(C1), p1: letterLabel(P1), c2: letterLabel(C2), p2: letterLabel(P2) }));
+    step(t('solve.stepSub', { dc: b.dc, dp: b.dp }));
+    if (b.reason === 'noSolution') {
+      box.append(steps, warn('solve.err.noSolution', { dp: b.dp, dc: b.dc, g: b.g }));
       return;
     }
-    step(t('solve.stepSub', { dc: r.dc, dp: r.dp }));
-    if (r.reason === 'noSolution') {
-      box.append(steps, el('p', 'warn', t('solve.err.noSolution', { dp: r.dp, dc: r.dc, g: r.g })));
+    if (b.g === 1) step(t('solve.stepInv', { dp: b.dp, dc: b.dc, inv: b.inv, a: b.a0 }));
+    else step(t('solve.stepGcd', { dp: b.dp, dc: b.dc, g: b.g, m: b.m, a0: b.a0, list: list(b.candidates) }));
+    if (b.reason === 'noValidA') {
+      box.append(steps, warn('solve.err.noValidA', { list: list(b.candidates) }));
       return;
     }
-    if (r.g === 1) step(t('solve.stepInv', { dp: r.dp, dc: r.dc, inv: r.inv, a: r.a0 }));
-    else step(t('solve.stepGcd', { dp: r.dp, dc: r.dc, g: r.g, m: r.m, a0: r.a0, list: list(r.candidates) }));
-    if (r.reason === 'noValidA') {
-      box.append(steps, el('p', 'warn', t('solve.err.noValidA', { list: list(r.candidates) })));
-      return;
+    for (const k of b.keys.slice(0, 3)) step(t('solve.stepB', { a: k.a, c1v: C1, p1v: P1, b: k.b }));
+    for (const c of r.checks) {
+      step(t('solve.stepCheck', { n: c.pair + 1, p: letterName(c.p), c: letterName(c.c), pv: c.p, cv: c.c, before: c.before, kept: c.kept.length }));
+      // 1つに決まったときは最後の結論で示すので、2〜3個残ったときだけ並べる
+      if (c.kept.length > 1 && c.kept.length <= 3) step(t('solve.stepKept', { list: c.kept.map(keyText).join(' / ') }));
     }
-    for (const k of r.keys.slice(0, 3)) step(t('solve.stepB', { a: k.a, c1v: C1, p1v: P1, b: k.b }));
     box.append(steps);
+    if (r.reason === 'eliminated') {
+      box.append(warn('solve.err.eliminated', { n: r.checks[r.checks.length - 1].pair + 1 }));
+      return;
+    }
     box.append(el('p', r.keys.length > 1 ? 'warn' : 'ok', r.keys.length > 1
       ? t('solve.several', { n: r.keys.length })
       : t('solve.one', { a: r.keys[0].a, b: r.keys[0].b })));
     const keys = el('div', 'key-buttons');
-    for (const k of r.keys) {
-      const btn = el('button', 'small-btn', t('btn.useKeyAB', { a: k.a, b: k.b }));
-      btn.type = 'button';
-      btn.addEventListener('click', () => {
-        setKeys(k.a, k.b);
-        toast(t('toast.setFrom', { a: k.a, b: k.b }));
-      });
-      keys.append(btn);
-    }
+    for (const k of r.keys) keys.append(keyButton(k, t('btn.useKeyAB', { a: k.a, b: k.b })));
     box.append(keys);
+  }
+
+  // ===== 手で解く: 暗号文の欄（クリブと頻度の仮定で使う） =====
+  function solveText() {
+    const text = $('solve-input').value;
+    if (!checkText('solve', $('solve-input'))) return null;
+    if (!C.letterCount(text)) {
+      showAlert($('input-alert-solve'), t('err.noLetters'), 'error');
+      return null;
+    }
+    return text;
+  }
+
+  const shorten = (text, n) => (text.length > n ? `${text.slice(0, n)}…` : text);
+
+  function resultTable(className, captionKey, prefix, cols, rows) {
+    const table = el('table', className);
+    table.append(el('caption', 'visually-hidden', t(captionKey, { top: rows.length })));
+    const head = el('tr');
+    for (const c of cols) {
+      const th = el('th', `col-${c}`, t(`${prefix}.col.${c}`));
+      th.scope = 'col';
+      head.append(th);
+    }
+    const thead = el('thead');
+    thead.append(head);
+    const tbody = el('tbody');
+    for (const row of rows) {
+      const tr = el('tr', row.top ? 'top' : '');
+      row.values.forEach((v, j) => {
+        const td = el('td', `col-${cols[j]}`, v);
+        td.dataset.label = t(`${prefix}.col.${cols[j]}`);
+        tr.append(td);
+      });
+      const action = el('td', 'col-action');
+      action.dataset.label = t(`${prefix}.col.action`);
+      const buttons = el('div', 'action-buttons');
+      buttons.append(...row.actions);
+      action.append(buttons);
+      tr.append(action);
+      tbody.append(tr);
+    }
+    table.append(thead, tbody);
+    return table;
+  }
+
+  // ===== 手で解く: 既知の単語（クリブ）を当てる =====
+  function crib() {
+    const text = solveText();
+    state.crib = text === null ? null : C.cribSearch(text, $('crib-word').value);
+    state.cribText = text || '';
+    renderCrib();
+  }
+
+  // 当たった位置（英字の何字目、1から）。6カ所以上は先頭5カ所と数
+  function positionsText(ps) {
+    const head = ps.slice(0, 5).map((x) => fmt(x + 1)).join(', ');
+    if (ps.length === 1) return head;
+    return t('crib.positions', { list: ps.length > 5 ? `${head}, …` : head, n: fmt(ps.length) });
+  }
+
+  function renderCrib() {
+    const status = $('crib-status');
+    const box = $('crib-results');
+    status.replaceChildren();
+    box.replaceChildren();
+    const r = state.crib;
+    if (!r) return;
+    if (!r.ok) {
+      status.append(el('p', 'warn', t(`crib.err.${r.reason}`, { n: r.word.length, letters: r.letters })));
+      return;
+    }
+    status.append(el('p', '', t('crib.status', { letters: fmt(r.letters), positions: fmt(r.positions), word: r.word })));
+    const ul = el('ul', 'crib-breakdown');
+    ul.append(
+      el('li', '', t('crib.pattern', { n: fmt(r.rejected.pattern) })),
+      el('li', '', t('crib.noKey', { p1: r.word[0], p2: r.word[r.second], n: fmt(r.rejected.noKey) })),
+      el('li', '', t('crib.mismatch', { n: fmt(r.rejected.mismatch) })),
+      el('li', '', t('crib.matched', { n: fmt(r.matched) }))
+    );
+    status.append(ul);
+    if (!r.results.length) {
+      status.append(el('p', 'warn', t('crib.none', { word: r.word })));
+      return;
+    }
+    status.append(el('p', 'ok', t('crib.found', { n: r.results.length })));
+    const rows = r.results.slice(0, TOP).map((x, i) => {
+      const toPairs = el('button', 'small-btn', t('btn.toPairs'));
+      toPairs.type = 'button';
+      toPairs.addEventListener('click', () => {
+        const pos = x.positions[0];
+        setPairs(C.cribPairsAt(state.cribText, r.word, pos));
+        solvePairs();
+        $('pairs-heading').scrollIntoView({ block: 'start' });
+        toast(t('toast.toPairs', { n: fmt(pos + 1) }));
+      });
+      return {
+        top: i === 0,
+        values: [String(i + 1), keyText(x), positionsText(x.positions), x.score.toFixed(1), shorten(x.preview, 80)],
+        actions: [keyButton(x, t('btn.useKey')), toPairs]
+      };
+    });
+    box.append(resultTable('crack-table crib-table', 'crib.caption', 'crib', ['rank', 'key', 'positions', 'score', 'text', 'action'], rows));
   }
 
   // ===== 手で解く: 多い文字を E・T と仮定する =====
   function frequency() {
-    const text = $('freq-input').value;
-    if (!checkText('solve', $('freq-input'))) return;
-    if (!C.letterCount(text)) {
-      showAlert($('input-alert-solve'), t('err.noLetters'), 'error');
-      state.freq = null;
-      renderFreq();
-      return;
-    }
-    state.freqText = text;
-    state.freq = C.frequencyHypotheses(text);
+    const text = solveText();
+    state.freq = text === null ? null : C.frequencyHypotheses(text);
+    state.freqText = text || '';
     renderFreq();
   }
 
@@ -459,6 +633,138 @@
     }
     table.append(thead, tbody);
     box.append(table);
+  }
+
+  // ===== 練習問題 =====
+  function randomSeed() {
+    try {
+      const x = new Uint32Array(1);
+      crypto.getRandomValues(x);
+      return (x[0] % C.QUIZ_MAX_SEED) + 1;
+    } catch {
+      return Math.floor(Math.random() * C.QUIZ_MAX_SEED) + 1;
+    }
+  }
+
+  function loadQuiz(raw) {
+    const text = String(raw ?? '').trim();
+    const seed = /^[0-9]+$/.test(text) ? Number(text) : NaN;
+    const ok = seed >= 1 && seed <= C.QUIZ_MAX_SEED;
+    $('quiz-seed').setAttribute('aria-invalid', String(!ok));
+    showAlert($('quiz-alert'), ok ? '' : t('quiz.err.seed'), ok ? '' : 'error');
+    if (!ok) return;
+    $('quiz-seed').value = String(seed);
+    state.quiz = { seed, questions: C.makeQuiz(seed), answers: [], results: null };
+    renderQuiz();
+  }
+
+  function questionText(x) {
+    const L = letterName;
+    if (x.type === 'inverse') return t('quiz.q.inverse', { a: x.a });
+    if (x.type === 'encrypt') return t('quiz.q.encrypt', { a: x.a, b: x.b, L: L(x.m), m: x.m });
+    if (x.type === 'decrypt') return t('quiz.q.decrypt', { a: x.a, b: x.b, L: L(x.c), c: x.c });
+    if (x.type === 'pairs') {
+      const [[p1, c1], [p2, c2]] = x.pairs;
+      return t('quiz.q.pairs', { p1: L(p1), c1: L(c1), p2: L(p2), c2: L(c2) });
+    }
+    return t('quiz.q.text');
+  }
+
+  function answerFields(x, i) {
+    const wrap = el('div', 'quiz-answer');
+    const answers = state.quiz.answers;
+    const field = (id, label, className, value, onInput) => {
+      const lab = el('label', '', label);
+      lab.htmlFor = id;
+      const input = el('input', className);
+      input.type = 'text';
+      input.id = id;
+      input.value = value ?? '';
+      input.autocomplete = 'off';
+      input.spellcheck = false;
+      if (className === 'letter-input') input.maxLength = 1;
+      else input.inputMode = 'numeric';
+      input.addEventListener('input', () => onInput(input.value));
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') checkQuiz();
+      });
+      wrap.append(lab, input);
+    };
+    if (x.type === 'inverse') field(`quiz-${i}`, t('quiz.answerNumber'), 'num-input', answers[i], (v) => { answers[i] = v; });
+    else if (x.type === 'encrypt' || x.type === 'decrypt') field(`quiz-${i}`, t('quiz.answerLetter'), 'letter-input', answers[i], (v) => { answers[i] = v; });
+    else {
+      const cur = answers[i] || { a: '', b: '' };
+      answers[i] = cur;
+      field(`quiz-${i}-a`, 'a', 'num-input', cur.a, (v) => { cur.a = v; });
+      field(`quiz-${i}-b`, 'b', 'num-input', cur.b, (v) => { cur.b = v; });
+    }
+    return wrap;
+  }
+
+  const signed = (n) => (n < 0 ? `−${-n}` : String(n));
+
+  function answerText(x) {
+    if (x.type === 'inverse') return String(x.answer);
+    if (x.type === 'encrypt' || x.type === 'decrypt') return letterName(x.answer);
+    return keyText(x.answer);
+  }
+
+  function explanation(x) {
+    if (x.type === 'inverse') {
+      const prod = x.a * x.answer;
+      return t('quiz.ex.inverse', { a: x.a, inv: x.answer, prod, k: (prod - 1) / 26 });
+    }
+    if (x.type === 'encrypt') return t('quiz.ex.encrypt', { a: x.a, m: x.m, b: x.b, v: x.a * x.m + x.b, c: x.answer, C: letterName(x.answer) });
+    if (x.type === 'decrypt') {
+      const inv = C.modInverse(x.a);
+      return t('quiz.ex.decrypt', { a: x.a, inv, c: x.c, b: x.b, v: signed(inv * (x.c - x.b)), m: x.answer, M: letterName(x.answer) });
+    }
+    if (x.type === 'pairs') {
+      const [[p1, c1], [p2, c2]] = x.pairs;
+      const r = C.solveFromPairs(letterName(p1), letterName(c1), letterName(p2), letterName(c2));
+      return t('quiz.ex.pairs', { dc: r.dc, dp: r.dp, inv: r.inv, a: x.answer.a, b: x.answer.b, c1v: c1, p1v: p1 });
+    }
+    return t('quiz.ex.text', { plain: x.plain });
+  }
+
+  function renderQuiz() {
+    const list = $('quiz-list');
+    list.replaceChildren();
+    const q = state.quiz;
+    if (!q) return;
+    q.questions.forEach((x, i) => {
+      const li = el('li', 'quiz-item');
+      li.append(el('h3', 'quiz-title', t('quiz.title', { n: i + 1, title: t(`quiz.title.${x.type}`) })), el('p', 'quiz-q', questionText(x)));
+      if (x.type === 'text') li.append(el('p', 'quiz-cipher', x.cipher));
+      const result = el('div', 'quiz-result');
+      result.id = `quiz-result-${i}`;
+      li.append(answerFields(x, i), result);
+      list.append(li);
+    });
+    renderQuizResults();
+  }
+
+  // 答え合わせの結果だけを描き直す（入力欄は作り直さないので、フォーカスが残る）
+  function renderQuizResults() {
+    const q = state.quiz;
+    const score = $('quiz-score');
+    score.replaceChildren();
+    if (!q) return;
+    q.questions.forEach((x, i) => {
+      const box = $(`quiz-result-${i}`);
+      box.replaceChildren();
+      if (!q.results) return;
+      const ok = q.results[i];
+      box.append(el('p', ok ? 'ok' : 'warn', ok ? t('quiz.correct') : t('quiz.wrong', { answer: answerText(x) })), el('p', 'hint', explanation(x)));
+    });
+    if (q.results) score.append(el('p', 'ok', t('quiz.score', { n: q.results.filter(Boolean).length })));
+  }
+
+  function checkQuiz() {
+    const q = state.quiz;
+    if (!q) return;
+    q.results = q.questions.map((x, i) => C.checkQuizAnswer(x, q.answers[i]));
+    renderQuizResults();
   }
 
   // ===== 座学: 逆元の計算機 =====
@@ -560,8 +866,10 @@
     refreshCrack();
     renderCrack();
     renderPairs();
+    renderCrib();
     renderFreq();
     renderCalc();
+    renderQuiz();
     const keys = readKeysQuiet();
     if ($('ciphertext').value && keys.ok) $('encrypt-note').textContent = C.isValidA(keys.a) ? '' : t('note.notInjective');
   }
@@ -598,12 +906,29 @@
     for (const id of ['p1', 'c1', 'p2', 'c2']) $(id).addEventListener('keydown', (e) => {
       if (e.key === 'Enter') solvePairs();
     });
-    $('freq-btn').addEventListener('click', frequency);
-    $('freq-input').addEventListener('input', () => checkText('solve', $('freq-input')));
-    $('freq-from-crack').addEventListener('click', () => {
-      $('freq-input').value = $('crack-input').value;
-      checkText('solve', $('freq-input'));
+    $('add-pair').addEventListener('click', () => {
+      addPairRow();
+      $(`p${pairRows().length}`).focus();
     });
+    $('remove-pair').addEventListener('click', removePairRow);
+    updatePairButtons();
+    $('crib-btn').addEventListener('click', crib);
+    $('crib-word').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') crib();
+    });
+    $('freq-btn').addEventListener('click', frequency);
+    $('solve-input').addEventListener('input', () => checkText('solve', $('solve-input')));
+    $('solve-from-crack').addEventListener('click', () => {
+      $('solve-input').value = $('crack-input').value;
+      checkText('solve', $('solve-input'));
+    });
+    $('quiz-load').addEventListener('click', () => loadQuiz($('quiz-seed').value));
+    $('quiz-seed').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') loadQuiz($('quiz-seed').value);
+    });
+    $('quiz-new').addEventListener('click', () => loadQuiz(randomSeed()));
+    $('quiz-check').addEventListener('click', checkQuiz);
+    loadQuiz(randomSeed());
     for (const btn of document.querySelectorAll('.preset-btn')) {
       btn.addEventListener('click', () => {
         setKeys(Number(btn.dataset.a), Number(btn.dataset.b));
