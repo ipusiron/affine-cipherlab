@@ -283,7 +283,7 @@
 
   // ===== 手で解く: 3つ目以降の組で絞り込む =====
   // 既知の組（平文字 → 暗号文字）がいくつあっても解く。最初の組と、平文字が最初と違う最初の組の2つで鍵を解き（solveFromPairs）、
-  // 残りの組で a·p + b ≡ c を満たす鍵だけを残す。同じ組の重複は1つとみなし、同じ平文字に別の暗号文字があれば矛盾
+  // 残りの組で a·p + b ≡ c を満たす鍵だけを残す（鍵が残らなくなったら、そこで止める）。同じ組の重複は1つとみなし、同じ平文字に別の暗号文字があれば矛盾
   function solveFromKnown(pairs) {
     const idx = pairs.map(([p, c]) => [letterIndex(p), letterIndex(c)]);
     const bad = idx.findIndex(([p, c]) => p === null || c === null);
@@ -299,7 +299,7 @@
     if (!base.ok) return { ...head, ok: false, reason: base.reason, keys: [] };
     let keys = base.keys;
     idx.forEach(([p, c], k) => {
-      if (k === 0 || k === second || idx.slice(0, k).some(([q]) => q === p)) return;
+      if (!keys.length || k === 0 || k === second || idx.slice(0, k).some(([q]) => q === p)) return;
       const got = (key) => mod(key.a * p + key.b, N);
       const kept = keys.filter((key) => got(key) === c);
       const removed = keys.filter((key) => got(key) !== c).map((key) => ({ ...key, got: got(key) }));

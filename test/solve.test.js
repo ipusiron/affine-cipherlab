@@ -87,8 +87,9 @@ test('差が13の2組では12個残る鍵が、3つ目の組で1つに決まる�
   assert.deepEqual([keysOf(r), r.reason, r.basePairs], [[[3, 1]], null, [0, 1]]);
   assert.deepEqual(r.checks.map((c) => [c.pair, c.p, c.c, c.before, c.kept.length, c.removed.length]), [[2, 2, 7, 12, 1, 11]]);
   assert.ok(r.checks[0].removed.every((k) => k.got === C.mod(k.a * 2 + k.b, 26) && k.got !== 7));
-  const none = C.solveFromKnown([['A', 'B'], ['N', 'O'], ['C', 'A']]);
+  const none = C.solveFromKnown([['A', 'B'], ['N', 'O'], ['C', 'A'], ['D', 'E']]);
   assert.deepEqual([none.ok, none.reason, none.keys], [false, 'eliminated', []]);
+  assert.deepEqual(none.checks.map((c) => [c.pair, c.kept.length]), [[2, 0]], '鍵が残らなくなったら、そこで止める');
 });
 
 test('同じ組の重複は1つとみなし、同じ平文字に別の暗号文字は矛盾（どの組か返す）。英字でない欄も組の番号を返す', () => {

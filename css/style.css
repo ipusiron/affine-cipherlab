@@ -436,6 +436,7 @@ button:disabled {
 /* ===== 手で解く ===== */
 #solve h3 { margin: 22px 0 6px; font-size: 17px; }
 #solve h3:first-of-type { margin-top: 4px; }
+#solve h4 { margin: 18px 0 6px; font-size: 16px; }
 
 .pairs { display: grid; gap: 8px; margin: 8px 0; }
 
@@ -462,14 +463,37 @@ button:disabled {
   border-radius: var(--radius-sm);
 }
 
-.letter-input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+.num-input, .word-input {
+  min-height: 44px;
+  font-size: 18px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.num-input { width: 72px; text-align: center; }
+.word-input { width: 12em; max-width: 100%; padding: 6px 10px; text-transform: uppercase; }
+
+.letter-input:focus, .num-input:focus, .word-input:focus {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.pair-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 10px; }
+.crib-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0 10px; }
+.crib-row .field-label { margin: 0; }
+.crib-row button.primary { margin: 0; }
+.crib-breakdown { margin: 4px 0; padding-left: 1.4em; font-size: 14px; }
 
 .steps { margin: 4px 0 8px; padding-left: 1.4em; font-size: 15px; }
 .steps li { margin: 4px 0; }
 
 .solve-result p.ok, .crack-status p.ok, .calc p.ok { color: var(--text); font-weight: 600; margin: 6px 0; }
 
-.solve-result p.warn, .calc p.warn {
+.solve-result p.warn, .calc p.warn, .quiz-result p.warn {
   color: var(--warn-text);
   background: var(--warn-bg);
   border: 1px solid var(--warn-border);
@@ -478,6 +502,32 @@ button:disabled {
 }
 
 .key-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.action-buttons { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.crib-table th, .crib-table td.col-rank, .crib-table td.col-key, .crib-table td.col-score { white-space: nowrap; }
+
+/* ===== 練習問題 ===== */
+.quiz-seed { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0; }
+.quiz-seed .field-label { margin: 0; }
+.quiz-list { list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 12px; }
+.quiz-item { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; }
+.quiz-title { margin: 0 0 6px; font-size: 16px; }
+.quiz-q { margin: 0 0 8px; font-size: 15px; }
+
+.quiz-cipher {
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 17px;
+  letter-spacing: 0.06em;
+  overflow-wrap: anywhere;
+}
+
+.quiz-answer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 15px; }
+.quiz-result p { margin: 8px 0 0; }
+.quiz-result p.ok { color: var(--accent-text); font-weight: 600; }
 
 .crack-links { margin: 10px 0 0; font-size: 15px; }
 
@@ -565,13 +615,18 @@ a { color: var(--accent-text); }
   .tab-content { padding: 16px 12px; }
 }
 
-@media (max-width: 560px) {
-  input[type="number"] { width: 84px; }
-  .pair-name { flex-basis: 100%; }
-  .tabs { display: grid; grid-template-columns: 1fr 1fr; border-bottom: none; gap: 6px; }
+/* タブは6つあるので、幅720px以下では3列、560px以下では2列のボタンにする */
+@media (max-width: 720px) {
+  .tabs { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: none; gap: 6px; }
   .tab-button { border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 0; }
   .tab-button.active { border: 1px solid var(--accent); border-top-width: 3px; }
   .tab-content { border-top: 1px solid var(--border); border-radius: var(--radius); margin-top: 8px; }
+}
+
+@media (max-width: 560px) {
+  input[type="number"] { width: 84px; }
+  .pair-name { flex-basis: 100%; }
+  .tabs { grid-template-columns: 1fr 1fr; }
 }
 
 /* 総当たりの表は、幅600px未満では1件ずつのかたまりにする（列名は data-label） */
@@ -581,6 +636,7 @@ a { color: var(--accent-text); }
   .crack-table tr { border: 1px solid var(--border); border-radius: var(--radius-sm); margin: 8px 0; padding: 4px 8px; }
   .crack-table td { display: grid; grid-template-columns: 7.5em 1fr; gap: 8px; text-align: left; border-bottom: none; padding: 4px 0; }
   .crack-table td::before { content: attr(data-label); color: var(--muted); font-weight: 600; }
+  .action-buttons { justify-content: flex-start; }
 }
 
 @media (prefers-reduced-motion: reduce) {
