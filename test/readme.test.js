@@ -212,3 +212,36 @@ test('画像: 参照はすべて実在し、日本語版は assets/、英語版�
   assert.deepEqual(pngs('assets'), [...new Set(refs.ja)].sort());
   assert.deepEqual(pngs('assets/en'), [...new Set(refs.en)].sort());
 });
+
+test('ユースケースの「このツールならではの使い方」の数は暗号化から数えた値と同じ（日英）', () => {
+  const [ja, en] = [read('README.md'), read('README.en.md')];
+  const AZ = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const enc = (t, a, b) => C.encrypt(t, a, b);
+  const order = (a, b) => { let s = AZ; for (let i = 1; i <= 26; i++) { s = enc(s, a, b); if (s === AZ) return i; } return null; };
+  const loops = (a, b) => {
+    const map = enc(AZ, a, b);
+    const seen = new Set();
+    const out = [];
+    for (const start of AZ) {
+      let loop = '';
+      for (let ch = start; !seen.has(ch); ch = map[AZ.indexOf(ch)]) { seen.add(ch); loop += ch; }
+      if (loop) out.push(loop);
+    }
+    return out;
+  };
+  const l58 = loops(5, 8);
+  assert.deepEqual([l58.filter((x) => x.length === 4).length, l58.filter((x) => x.length === 1).join('')], [6, 'LY']);
+  assert.ok(l58.includes('AIWO') && l58.includes('BNVJ'));
+  assert.deepEqual([order(5, 8), order(3, 1), order(25, 25), order(1, 3)], [4, 6, 2, 26]);
+  const keys = C.VALID_A.flatMap((a) => Array.from({ length: 26 }, (_, b) => [a, b]));
+  assert.equal(keys.length, 312);
+  assert.deepEqual([...new Set(keys.map(([a, b]) => order(a, b)))].sort((x, y) => x - y), [1, 2, 3, 4, 6, 12, 13, 26]);
+  assert.equal(enc(enc('MEETMEATNOON', 5, 8), 3, 1), enc('MEETMEATNOON', 15, 25));
+  assert.equal(enc('MEETMEATNOON', 15, 25), 'XHHYXHZYMBBM');
+  assert.deepEqual([(3 * 5) % 26, (3 * 8 + 1) % 26], [15, 25]);
+  const fixed = (a, b) => [...enc(AZ, a, b)].filter((ch, i) => ch === AZ[i]).length;
+  const count = (n) => keys.filter(([a, b]) => fixed(a, b) === n).length;
+  assert.deepEqual([count(2), count(0), count(26)], [143, 168, 1]);
+  for (const text of [ja, en]) assert.ok(text.includes('MEETMEATNOON') && text.includes('XHHYXHZYMBBM'));
+  assert.ok(ja.includes('2つの鍵が143個、1つもない鍵が168個') && en.includes('143 keys have two unchanged letters, 168 have none'));
+});

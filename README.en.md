@@ -341,6 +341,14 @@ Opening the tool with a ciphertext in `#text=` (or `?text=`) opens it on the Bru
 
 ## 🎯 Use cases
 
+Ways of using this tool in particular
+
+- Counting how many repeats with the same key bring the text back (math classes, the order of a group element): encrypt a text with a=5, b=8, then encrypt the result again with the same key, and the fourth time gives the original text back. Following the arrows in the mapping table splits the alphabet into six 4-letter loops such as AIWO and BNVJ and the fixed letters L and Y, and the least common multiple of the loop lengths is the number of repeats. a=3, b=1 takes 6, Atbash (a=25, b=25) takes 2, and a=1, b=3, the same as a Caesar cipher, takes 26; for all 312 keys the number is one of 1, 2, 3, 4, 6, 12, 13 and 26
+- Checking that two encryptions collapse into one (function composition, cryptography classes): encrypt a text with a=5, b=8 and then with a=3, b=1, and you get the same text as one encryption with a=15, b=25 (MEETMEATNOON to XHHYXHZYMBBM). a is 3 × 5 = 15 and b is 3 × 8 + 1 = 25 (the remainder after dividing by 26). Doing it twice never leaves the 312 keys, so a brute-force attack does not get any harder
+- Finding letters that encryption leaves unchanged (cryptography classes, history of cryptography): with a=5, b=8, L and Y stay the same letters after encryption. Counting all 312 keys, 143 keys have two unchanged letters, 168 have none, and the remaining one is a=1, b=0 (every letter stays). The Enigma machine of the Second World War was the opposite: no letter was ever encrypted to itself, which let codebreakers narrow down where a guessed plaintext (a crib) could be placed. You can compare how both staying and moving give clues
+
+General uses
+
 - Classes and study groups: show what coprime means, the inverse, and a mapping that is not one-to-one, in a visible table. Sharing a question number on the Practice tab lets everyone solve the same questions
 - Puzzles: run a ciphertext that looks like an affine cipher through the brute-force attack and compare the candidates. If you know a word likely to be in the plaintext, narrow down the key with a crib
 - CTF practice: confirm that a classical cipher problem has only 312 possible keys
